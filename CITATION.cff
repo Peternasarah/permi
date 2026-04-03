@@ -1,0 +1,122 @@
+cff-version: 1.2.0
+
+# ── Project identity ──────────────────────────────────────────────────────────
+
+title: "Permi"
+
+abstract: >
+  Permi is an open-source, AI-powered static vulnerability scanner for
+  developers and SMBs. It detects common security vulnerabilities — including
+  SQL injection, cross-site scripting, hardcoded secrets, and insecure
+  practices — using a regex-based rule engine, and applies a large language
+  model filter to reduce false positives. Permi includes vulnerability rules
+  specific to the Nigerian development context, including USSD gateway
+  misconfigurations and local payment gateway credential exposure. It runs
+  entirely locally with no cloud backend required, storing results in a local
+  SQLite database. Permi is distributed as a Python CLI package via PyPI and
+  is designed to be accessible to developers in emerging markets who are
+  underserved by expensive, enterprise-focused security tooling.
+
+# ── Authorship ────────────────────────────────────────────────────────────────
+
+authors:
+  - family-names: "Dashe"
+    given-names: "Nasarah Peter"
+    alias: "Peter N. D."
+    affiliation: "University of Jos, Nigeria"
+    country: NG
+    email: "dashenasarahpeter@gmail.com"
+    orcid: ""  # Add your ORCID if you register one at orcid.org
+
+# ── Version and dates ─────────────────────────────────────────────────────────
+
+version: "0.1.1"
+date-released: "2026-04-03"
+
+# ── Repository and distribution ───────────────────────────────────────────────
+
+repository-code: "https://github.com/peternasarah/permi"
+url: "https://pypi.org/project/permi/"
+repository-artifact: "https://pypi.org/project/permi/0.1.1/"
+
+# ── License ───────────────────────────────────────────────────────────────────
+
+license: "LicenseRef-Permi-Community-License"
+license-url: "https://github.com/peternasarah/permi/blob/main/LICENSE"
+
+# ── Keywords ─────────────────────────────────────────────────────────────────
+
+keywords:
+  - security
+  - vulnerability-scanner
+  - static-analysis
+  - SAST
+  - AI
+  - false-positive-filter
+  - SQL-injection
+  - XSS
+  - secrets-detection
+  - USSD
+  - Nigeria
+  - cybersecurity
+  - developer-tools
+  - CLI
+  - Python
+  - open-source
+
+# ── Classification ────────────────────────────────────────────────────────────
+
+type: software
+
+# ── How to cite ───────────────────────────────────────────────────────────────
+
+# If you use Permi in academic research, a security audit report,
+# or a published project, please cite it using the format below.
+#
+# APA:
+#   Dashe, N. P. (2026). Permi (Version 0.1.1) [Software].
+#   University of Jos, Nigeria. https://github.com/peternasarah/permi
+#
+# BibTeX:
+#   @software{dashe2026permi,
+#     author    = {Dashe, Nasarah Peter},
+#     title     = {Permi},
+#     version   = {0.1.1},
+#     year      = {2026},
+#     publisher = {GitHub},
+#     url       = {https://github.com/peternasarah/permi},
+#     note      = {AI-powered vulnerability scanner for Nigerian developers
+#                  and global SMBs}
+#   }
+
+# ── References ────────────────────────────────────────────────────────────────
+
+references:
+  - type: standard
+    title: "OWASP Top Ten Web Application Security Risks"
+    authors:
+      - name: "OWASP Foundation"
+    url: "https://owasp.org/www-project-top-ten/"
+    year: 2021
+
+  - type: standard
+    title: "Nigeria Data Protection Regulation (NDPR)"
+    authors:
+      - name: "National Information Technology Development Agency (NITDA)"
+    url: "https://nitda.gov.ng/ndpr/"
+    year: 2019
+
+  - type: software
+    title: "OpenRouter"
+    abstract: "Unified API for large language model access used for Permi's AI false-positive filter"
+    url: "https://openrouter.ai"
+
+  - type: software
+    title: "Click"
+    abstract: "Python CLI framework used to build the Permi command-line interface"
+    url: "https://click.palletsprojects.com"
+
+  - type: software
+    title: "DeepSeek V3"
+    abstract: "Large language model used via OpenRouter for AI-powered false-positive filtering"
+    url: "https://openrouter.ai/deepseek/deepseek-chat"

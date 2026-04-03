@@ -1,0 +1,141 @@
+name: Bug Report
+description: Report something that is broken or behaving incorrectly in Permi
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug. A clear report helps us
+        fix it faster. Please fill in as much detail as you can.
+
+        **Security vulnerabilities in Permi should NOT be reported here.**
+        See [SECURITY.md](../SECURITY.md) for responsible disclosure instructions.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues and this has not been reported before
+          required: true
+        - label: I am using the latest version of Permi (`pip install --upgrade permi`)
+          required: true
+        - label: This is not a security vulnerability (see SECURITY.md if it is)
+          required: true
+
+  - type: dropdown
+    id: bug_type
+    attributes:
+      label: Bug category
+      description: What area of Permi is affected?
+      options:
+        - Scanner engine (wrong findings, missed vulnerabilities, crashes during scan)
+        - AI filter (wrong REAL/FP verdicts, API errors, filter not running)
+        - CLI (command errors, wrong output format, argument parsing issues)
+        - Database (findings not saved, database errors, corruption)
+        - GitHub URL support (clone failures, scan errors on remote repos)
+        - Installation (pip install fails, import errors, missing dependencies)
+        - Documentation (incorrect instructions, missing examples)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. What did you expect to happen? What actually happened?
+      placeholder: |
+        I ran `permi scan --path ./myapp` and expected to see findings for SQL injection
+        in auth.py, but Permi reported zero findings despite the file containing a clear
+        string concatenation query on line 42.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps to reproduce the bug. Include the full command you ran.
+      placeholder: |
+        1. Create a file `test.py` with content: `cursor.execute("SELECT * FROM users WHERE name = " + username)`
+        2. Run: `permi scan --path . --offline`
+        3. Observe: zero findings reported
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should have happened?
+      placeholder: Permi should have flagged line 1 as SQL001 (high severity).
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_output
+    attributes:
+      label: Actual output
+      description: Paste the full terminal output here, including any error messages.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: permi_version
+    attributes:
+      label: Permi version
+      description: Run `pip show permi` and paste the Version line
+      placeholder: "0.1.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS (Intel)
+        - macOS (Apple Silicon)
+        - Ubuntu / Debian Linux
+        - Other Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      description: Run `python --version` and paste the result
+      placeholder: "Python 3.11.4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: offline_mode
+    attributes:
+      label: Does the bug occur in offline mode?
+      description: Run with `--offline` flag. Does the bug still happen?
+      options:
+        - "Yes — bug occurs with --offline"
+        - "No — bug only occurs without --offline (AI filter related)"
+        - "Not applicable / did not test"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: |
+        Anything else that might help — the file that triggered the issue,
+        the type of codebase being scanned, relevant configuration, etc.
+        Do not paste sensitive code or credentials.

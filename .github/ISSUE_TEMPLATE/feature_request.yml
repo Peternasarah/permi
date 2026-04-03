@@ -1,0 +1,113 @@
+name: Feature Request
+description: Suggest a new vulnerability rule, integration, or improvement to Permi
+title: "[Feature] "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to Permi. The best features come
+        from people who use the tool on real projects and understand what is missing.
+
+        Before submitting, check if a similar request already exists in
+        [open issues](https://github.com/peternasarah/permi/issues).
+
+  - type: dropdown
+    id: feature_type
+    attributes:
+      label: What kind of improvement is this?
+      options:
+        - New vulnerability rule (new pattern to detect)
+        - Nigerian / African market-specific rule or feature
+        - New integration (VS Code, GitHub Action, CI/CD system)
+        - CLI improvement (new flag, better output, new command)
+        - AI filter improvement (better prompts, fewer false positives)
+        - Performance improvement (faster scanning, lower memory use)
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: |
+        Describe the gap or frustration this feature would address.
+        The best feature requests start with a real problem, not a solution.
+      placeholder: |
+        When I scan Flask applications, Permi does not detect when
+        user input is passed directly to subprocess.run() without sanitisation.
+        I have seen this cause real remote code execution vulnerabilities in
+        Nigerian fintech backends.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: What would you like Permi to do?
+      description: Describe your proposed solution. Be as specific as you can.
+      placeholder: |
+        Add a new rule (INS006 or similar) that detects patterns like:
+          subprocess.run(user_input, shell=True)
+          os.system(request.args.get('cmd'))
+        and flags them as high severity.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example_code
+    attributes:
+      label: Code example (if proposing a new rule)
+      description: |
+        If you are proposing a new vulnerability rule, paste an example of
+        the vulnerable code pattern it should detect.
+        Do not paste real credentials or sensitive data.
+      render: python
+      placeholder: |
+        # Example of vulnerable code this rule should catch:
+        import subprocess
+        user_cmd = request.args.get('cmd')
+        subprocess.run(user_cmd, shell=True)  # should be flagged
+
+  - type: textarea
+    id: nigerian_context
+    attributes:
+      label: Nigerian / African market context (optional)
+      description: |
+        Does this feature address something specific to Nigerian or African
+        development context — USSD, mobile money, NDPR compliance, local
+        hosting providers, local payment gateways?
+        If yes, explain the context. These requests are prioritised.
+
+  - type: dropdown
+    id: willing_to_contribute
+    attributes:
+      label: Are you willing to build this?
+      description: You do not have to — but if you are, we will help you.
+      options:
+        - "Yes — I would like to build this with guidance"
+        - "Yes — I can build this independently"
+        - "No — I am suggesting it for someone else to build"
+        - "Maybe — depends on the complexity"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have considered
+      description: |
+        Have you found a workaround? Are there other tools that do this?
+        How do you currently handle the problem this feature would solve?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: |
+        Links to relevant CVEs, OWASP references, NDPR articles,
+        or examples of this vulnerability in the wild (no real exploit code).

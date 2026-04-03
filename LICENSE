@@ -1,0 +1,198 @@
+PERMI COMMUNITY LICENSE
+Version 1.0 — April 2026
+
+Copyright (c) 2026 Nasarah Peter Dashe
+University of Jos, Nigeria
+
+═══════════════════════════════════════════════════════════════════════════════
+PREAMBLE
+═══════════════════════════════════════════════════════════════════════════════
+
+Permi was built because Nigerian developers and SMBs deserve world-class
+security tooling that understands their context, their constraints, and their
+market. This license exists to keep Permi free and open for the people it was
+built to serve, while protecting the work that makes it possible.
+
+This license grants broad freedoms for personal, educational, and open-source
+use, while requiring that commercial use — particularly by companies that
+compete directly with Permi or profit from its AI-powered features — obtain a
+separate commercial license.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 1 — DEFINITIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+"Software" means the Permi source code, documentation, rules engine,
+configuration files, and all associated files distributed under this license.
+
+"You" means the individual or legal entity exercising rights under this
+license.
+
+"Commercial Use" means any use of the Software, in whole or in part, that is
+primarily intended for or directed toward commercial advantage or monetary
+compensation. This includes, but is not limited to:
+  - Offering the Software as a hosted service (SaaS) to paying customers
+  - Selling the Software or a product that bundles the Software
+  - Using the Software internally at a for-profit company with more than
+    10 employees or more than $50,000 USD in annual revenue
+
+"Non-Commercial Use" means use that is not Commercial Use. This includes:
+  - Personal projects and experimentation
+  - Academic research and university coursework
+  - Open-source projects distributed under an OSI-approved license
+  - Use by registered non-profit organisations
+  - Use by individual freelancers scanning their own clients' codebases
+    as part of a consulting engagement (not resale of the tool itself)
+
+"Derivative Work" means any work that is based on or derived from the
+Software, including modifications, translations, adaptations, or any work
+that incorporates a substantial portion of the Software.
+
+"Contributor" means any individual or entity that submits code, documentation,
+bug reports, or other contributions to the Permi project.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 2 — GRANT OF RIGHTS (NON-COMMERCIAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+Subject to the terms and conditions of this license, the copyright holder
+hereby grants You a worldwide, royalty-free, non-exclusive license to:
+
+  1. Use the Software for any Non-Commercial Use without restriction.
+
+  2. Copy, modify, and distribute the Software and Derivative Works in
+     source or binary form, provided that:
+
+     a. You retain this license notice, the copyright notice above, and
+        all warranty disclaimers in all copies or substantial portions
+        of the Software.
+
+     b. Derivative Works distributed to others are licensed under terms
+        that are no more permissive than this license.
+
+     c. You clearly mark any modified files as changed from the originals,
+        including the date of modification and a brief description of
+        the changes made.
+
+     d. You do not remove, alter, or obscure any attribution notices or
+        branding references to Permi or its author in the Software or
+        its documentation.
+
+  3. Publish, present, and share results produced by the Software,
+     provided that you attribute Permi appropriately (see Part 5).
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 3 — COMMERCIAL USE
+═══════════════════════════════════════════════════════════════════════════════
+
+Commercial Use of the Software requires a separate written commercial license
+agreement from the copyright holder.
+
+To enquire about a commercial license, contact:
+
+  Peter Nasarah Dashe
+  Email:  dashenasarahpeter@gmail.com  (or current contact listed at dev.to/peternasarah)
+  GitHub: github.com/peternasarah
+
+Commercial licenses are available at reasonable rates and are designed to
+support the continued development of Permi as a free tool for the community.
+
+Companies and individuals engaged in Non-Commercial Use are never required to
+purchase a commercial license.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 4 — CONTRIBUTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+By submitting a contribution to this project (including pull requests, issues,
+documentation, or code), You agree that:
+
+  1. Your contribution is Your original work or You have the right to
+     submit it under the terms of this license.
+
+  2. You grant the copyright holder a perpetual, worldwide, non-exclusive,
+     royalty-free license to use, reproduce, modify, and distribute Your
+     contribution as part of the Software under any license the copyright
+     holder chooses, including future versions of this license.
+
+  3. You understand that your contribution may be used in both the
+     community (free) and commercial versions of Permi.
+
+  4. You will not be compensated for contributions unless a separate written
+     agreement states otherwise.
+
+See CONTRIBUTING.md for contribution guidelines.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 5 — ATTRIBUTION
+═══════════════════════════════════════════════════════════════════════════════
+
+If you use, redistribute, or build upon the Software, you must:
+
+  1. Give appropriate credit to Permi and its author:
+     "Powered by Bilongstech (github.com/peternasarah/permi) by Peter Nasarah Dashe"
+
+  2. Provide a link to this license.
+
+  3. Indicate if changes were made.
+
+You may do so in any reasonable manner, but not in any way that suggests the
+copyright holder endorses you or your use.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 6 — TRADEMARKS
+═══════════════════════════════════════════════════════════════════════════════
+
+This license does not grant permission to use the trade name "Permi", the
+Permi logo, or any other trademarks of the copyright holder to endorse or
+promote products derived from this Software without prior written permission.
+
+You may truthfully state that your product "uses Permi" or "is built on Permi"
+provided such statements are accurate and do not imply endorsement.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 7 — DISCLAIMER OF WARRANTIES
+═══════════════════════════════════════════════════════════════════════════════
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, ACCURACY OF SECURITY FINDINGS, AND
+NON-INFRINGEMENT.
+
+PERMI IS A SECURITY ASSISTANCE TOOL. IT DOES NOT GUARANTEE THE DETECTION OF
+ALL VULNERABILITIES IN SCANNED CODE. THE ABSENCE OF FINDINGS DOES NOT IMPLY
+THE ABSENCE OF VULNERABILITIES. YOU ARE RESPONSIBLE FOR VALIDATING ALL
+FINDINGS AND FOR THE SECURITY OF YOUR OWN SYSTEMS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING BUT NOT LIMITED TO PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 8 — TERMINATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Your rights under this license terminate automatically if you fail to comply
+with any of its terms. Upon termination, you must cease all use and
+distribution of the Software and destroy all copies in your possession.
+
+The copyright holder may reinstate your rights at their discretion upon
+written notice.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 9 — GOVERNING LAW
+═══════════════════════════════════════════════════════════════════════════════
+
+This license shall be governed by and construed in accordance with the laws
+of the Federal Republic of Nigeria, without regard to its conflict of law
+provisions.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Built in Nigeria. For Nigeria. Then for the World.
+
+Permi — github.com/peternasarah/permi
