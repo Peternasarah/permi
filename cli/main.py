@@ -12,7 +12,14 @@ from scanner.scan import scan
 
 @click.group()
 def cli():
-    """Permi — AI-powered vulnerability scanner for Nigerian developers."""
+    """
+    Permi — AI-powered vulnerability scanner.
+
+    Scans code for vulnerabilities and uses AI to filter out false
+    positives so you only see findings that actually matter.
+
+    Built in Nigeria. For Nigeria. Then for the world.
+    """
     pass
 
 
@@ -35,12 +42,44 @@ def scan_cmd(path, output, severity, offline, project):
     """
     Scan a local directory or GitHub repo for vulnerabilities.
 
-    Examples:\n
-        permi scan --path ./myapp\n
-        permi scan --path ./myapp --severity high\n
-        permi scan --path ./myapp --output json\n
-        permi scan --path ./myapp --offline\n
+    Permi detects SQL injection, XSS, hardcoded secrets, insecure
+    practices, and USSD vulnerabilities. An AI filter then removes
+    false positives so only real issues are shown.
+
+    \b
+    EXAMPLES
+
+      Scan a local project:
+        permi scan --path ./myapp
+
+      Scan a GitHub repo:
         permi scan --path https://github.com/user/repo
+
+      High severity only:
+        permi scan --path ./myapp --severity high
+
+      Export as JSON for CI/CD:
+        permi scan --path ./myapp --output json
+
+      Skip AI filter (no API key needed):
+        permi scan --path ./myapp --offline
+
+      Name your project in the database:
+        permi scan --path ./myapp --project my-api
+
+    \b
+    SEVERITY LEVELS
+
+      high    — SQL injection, hardcoded secrets, eval(), XSS, SSL disabled
+      medium  — debug mode, USSD input issues
+      low     — informational findings
+      all     — everything (default)
+
+    \b
+    EXIT CODES
+
+      0   No high severity findings
+      1   At least one high severity finding (useful for CI/CD pipelines)
     """
     if output == "human":
         print_banner()

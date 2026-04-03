@@ -5,3 +5,4 @@ __pycache__/
 *.db
 .DS_Store
 permi.egg-info/
+start.bat
