@@ -1,7 +1,9 @@
 # scanner/scan.py
 # Full scan pipeline — engine + AI filter combined.
+# Supports local directories and GitHub URLs.
 
-import json
+import tempfile
+import subprocess
 from pathlib import Path
 
 from scanner.engine import scan_directory as run_engine
@@ -13,95 +15,109 @@ from db.queries import (
     save_finding,
     finish_scan,
     update_last_scan,
-    get_findings_for_scan,
 )
 
 
-def scan(path: str, project_name: str = None, offline: bool = False) -> list[dict]:
+def _is_github_url(path: str) -> bool:
+    """Return True if the path looks like a GitHub URL."""
+    p = path.strip().strip('"').strip("'")
+    return p.startswith("https://github.com/") or p.startswith("git@github.com:")
+
+
+def _clone_repo(url: str, target_dir: Path) -> None:
     """
-    Full scan pipeline:
-      1. Resolve path
-      2. Create/find project in DB
-      3. Start scan record
-      4. Run rule engine over all files
-      5. Save every raw finding to DB
-      6. Run AI filter — updates ai_verdict in DB, drops false positives
-      7. Finish scan record
-      8. Return only REAL findings
-
-    Args:
-        path:         Local directory to scan.
-        project_name: Optional display name. Defaults to folder name.
-        offline:      If True, skip AI filter and return all raw findings.
+    Clone a GitHub repo into target_dir.
+    Raises RuntimeError if git is not installed or the clone fails.
     """
-    # ── 1. Resolve path ───────────────────────────────────────────────────────
-    target = Path(path).resolve()
-    if not target.exists():
-        raise FileNotFoundError(f"Path does not exist: {target}")
-    if not target.is_dir():
-        raise NotADirectoryError(f"Path is not a directory: {target}")
+    print(f"[Permi] Cloning  : {url}")
+    result = subprocess.run(
+        ["git", "clone", "--depth", "1", url, str(target_dir)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"git clone failed:\n{result.stderr.strip()}")
+    print(f"[Permi] Cloned to: {target_dir}\n")
 
-    name = project_name or target.name
 
-    # ── 2. Init DB and create/find project ────────────────────────────────────
+def scan(
+    path: str,
+    project_name: str = None,
+    offline: bool = False,
+) -> tuple[list[dict], int]:
+    """
+    Full scan pipeline.
+
+    Returns:
+        (real_findings, raw_count)
+        real_findings — findings the AI marked as REAL
+        raw_count     — total before AI filtering (for accurate summary)
+    """
+    # ── Normalise path ────────────────────────────────────────────────────────
+    path = path.strip().strip('"').strip("'")
+    is_github = _is_github_url(path)
+
+    # ── GitHub URL — clone to a temp directory ────────────────────────────────
+    if is_github:
+        tmp = tempfile.TemporaryDirectory()
+        target = Path(tmp.name) / "repo"
+        _clone_repo(path, target)
+        default_name = path.rstrip("/").split("/")[-1].replace(".git", "")
+    else:
+        tmp = None
+        target = Path(path).resolve()
+        if not target.exists():
+            raise FileNotFoundError(f"Path does not exist: {target}")
+        if not target.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {target}")
+        default_name = target.name
+
+    name = project_name or default_name
+
+    # ── Init DB and create/find project ───────────────────────────────────────
     init_db()
     conn = get_connection()
     project_id = create_project(conn, name=name, path=str(target))
 
-    # ── 3. Start scan record ──────────────────────────────────────────────────
+    # ── Start scan record ─────────────────────────────────────────────────────
     scan_id = start_scan(conn, project_id)
 
-    print(f"\n[Permi] Scanning : {target}")
+    print(f"[Permi] Scanning : {target}")
     print(f"[Permi] Project  : {name}  (id={project_id})")
     print(f"[Permi] Scan     : id={scan_id}\n")
 
-    # ── 4. Run the engine ─────────────────────────────────────────────────────
+    # ── Run the engine ────────────────────────────────────────────────────────
     raw_findings = run_engine(target)
+    raw_count    = len(raw_findings)
     scanned_files = len({f["file"] for f in raw_findings}) if raw_findings else 0
 
-    print(f"[Permi] Engine found {len(raw_findings)} raw finding(s) "
+    print(f"[Permi] Engine found {raw_count} raw finding(s) "
           f"across {scanned_files} file(s)\n")
 
-    # ── 5. Save every raw finding to DB ───────────────────────────────────────
+    # ── Save every raw finding to DB ──────────────────────────────────────────
     for finding in raw_findings:
         finding_id = save_finding(conn, scan_id, finding)
-        finding["id"] = finding_id   # attach DB id so filter can update it
+        finding["id"] = finding_id
 
     conn.close()
 
-    # ── 6. Run AI filter ──────────────────────────────────────────────────────
-    # filter.py opens its own connection to update ai_verdict per finding
+    # ── Run AI filter ─────────────────────────────────────────────────────────
     real_findings = run_filter(raw_findings, offline=offline)
 
-    # ── 7. Finish scan record ─────────────────────────────────────────────────
+    # ── Finish scan record ────────────────────────────────────────────────────
     conn = get_connection()
     finish_scan(
         conn,
         scan_id=scan_id,
         total_files=scanned_files,
-        total_findings=len(real_findings),   # only real findings count
+        total_findings=len(real_findings),
     )
     update_last_scan(conn, project_id)
     conn.close()
 
-    return real_findings
+    # ── Clean up temp clone ───────────────────────────────────────────────────
+    if tmp:
+        tmp.cleanup()
+        print("[Permi] Temp clone deleted.\n")
 
-
-def print_results(findings: list[dict]) -> None:
-    """Print findings as clean JSON."""
-    clean = [
-        {k: v for k, v in f.items() if v is not None}
-        for f in findings
-    ]
-    print(json.dumps(clean, indent=2))
-
-
-def summary(findings: list[dict]) -> None:
-    """Print a short summary line."""
-    high   = sum(1 for f in findings if f["severity"] == "high")
-    medium = sum(1 for f in findings if f["severity"] == "medium")
-    low    = sum(1 for f in findings if f["severity"] == "low")
-
-    print(f"[Permi] Done — "
-          f"{len(findings)} real finding(s): "
-          f"{high} high  {medium} medium  {low} low")
+    return real_findings, raw_count
