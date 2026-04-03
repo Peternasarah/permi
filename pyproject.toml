@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "permi"
+version = "0.1.0"
+description = "AI-powered vulnerability scanner for Nigerian developers"
+requires-python = ">=3.9"
+dependencies = [
+    "python-dotenv",
+    "colorama",
+    "click",
+]
+
+[project.scripts]
+permi = "cli.main:cli"
