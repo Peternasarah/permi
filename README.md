@@ -1,3 +1,6 @@
+[![PyPI version](https://badge.fury.io/py/permi.svg)](https://pypi.org/project/permi/)
+[![CI](https://github.com/Peternasarah/permi/actions/workflows/ci.yml/badge.svg)](https://github.com/Peternasarah/permi/actions/workflows/ci.yml)
+
 # Permi
 
 **AI-powered vulnerability scanner for Nigerian developers and global SMBs.**

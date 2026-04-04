@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.1.1"
+version = "0.1.2"
 description = "AI-powered vulnerability scanner for Nigerian developers"
 requires-python = ">=3.9"
 dependencies = [
@@ -13,6 +13,12 @@ dependencies = [
     "click",
     "requests",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Peternasarah/permi"
+Repository = "https://github.com/Peternasarah/permi"
+"Bug Tracker" = "https://github.com/Peternasarah/permi/issues"
+Changelog = "https://github.com/Peternasarah/permi/releases"
 
 [project.scripts]
 permi = "cli.main:cli"
