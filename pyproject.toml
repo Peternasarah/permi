@@ -4,9 +4,44 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.1.2"
-description = "AI-powered vulnerability scanner for Nigerian developers"
+version = "0.1.3"
+description = "AI-powered vulnerability scanner for Nigerian developers and global SMBs"
+readme = "README.md"
 requires-python = ">=3.9"
+license = "LicenseRef-Permi-Community-License"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Nasarah Peter Dashe", email = "dashenasarahpeter@gmail.com" }
+]
+keywords = [
+    "security",
+    "vulnerability-scanner",
+    "static-analysis",
+    "SAST",
+    "AI",
+    "nigeria",
+    "cybersecurity",
+    "developer-tools",
+    "CLI",
+    "SQL-injection",
+    "XSS",
+    "secrets-detection",
+    "USSD"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+]
 dependencies = [
     "python-dotenv",
     "colorama",
