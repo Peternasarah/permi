@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Permi — AI-powered vulnerability scanner for Nigerian developers and global SMBs. Free to install. No cloud required." />
+  <meta property="og:title" content="Permi — Security scanning for Nigerian developers" />
+  <meta property="og:description" content="Scan your code for vulnerabilities in seconds. AI filters out the noise. Free and open source." />
+  <meta property="og:url" content="https://peternasarah.github.io/permi" />
+  <title>Permi — AI Security Scanner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --blue:      #2f81f7;
+      --blue-dark: #1f6feb;
+      --green:     #3fb950;
+      --red:       #f85149;
+      --yellow:    #d29922;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --radius:    8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .nav-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-brand span { color: var(--blue); }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 6rem 2rem 4rem;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(47, 129, 247, 0.12);
+      border: 1px solid rgba(47, 129, 247, 0.3);
+      color: var(--blue);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.9rem;
+      border-radius: 2rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.2rem;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--blue);
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── INSTALL BLOCK ── */
+    .install-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.8rem 1.2rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 1rem;
+      color: var(--green);
+      margin-bottom: 0.8rem;
+    }
+
+    .install-block .prompt { color: var(--muted); user-select: none; }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+    .install-note {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    /* ── TERMINAL DEMO ── */
+    .terminal {
+      max-width: 780px;
+      margin: 3rem auto;
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .terminal-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green  { background: #27c93f; }
+
+    .terminal-title {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-left: auto;
+      margin-right: auto;
+      font-family: monospace;
+    }
+
+    .terminal-body {
+      padding: 1.2rem 1.4rem;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    .t-cmd   { color: #79c0ff; }
+    .t-info  { color: var(--muted); }
+    .t-high  { color: var(--red); font-weight: 600; }
+    .t-med   { color: var(--yellow); }
+    .t-ok    { color: var(--green); }
+    .t-ai    { color: #d2a8ff; }
+    .t-file  { color: #e3b341; }
+
+    /* ── SECTION ── */
+    section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+    }
+
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 0.8rem;
+    }
+
+    section h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    section p {
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+
+    /* ── FEATURE GRID ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: var(--blue); }
+
+    .feature-icon {
+      font-size: 1.6rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* ── DETECTION TABLE ── */
+    .detection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.7rem;
+      margin-top: 1.5rem;
+    }
+
+    .detection-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      font-size: 0.88rem;
+    }
+
+    .detection-item .severity {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      margin-top: 2px;
+    }
+
+    .sev-high   { background: rgba(248,81,73,0.15);  color: var(--red);    }
+    .sev-medium { background: rgba(210,153,34,0.15); color: var(--yellow); }
+
+    /* ── WAITLIST ── */
+    .waitlist-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .waitlist-inner {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+
+    .waitlist-inner h2 { margin-bottom: 0.6rem; }
+
+    .waitlist-inner p {
+      color: var(--muted);
+      margin-bottom: 1.8rem;
+      max-width: 100%;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .waitlist-form input {
+      flex: 1;
+      min-width: 220px;
+      padding: 0.65rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .waitlist-form input:focus { border-color: var(--blue); }
+    .waitlist-form input::placeholder { color: var(--muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ───────────────────────────────────────────────────────────────── -->
+<nav>
+  <span class="nav-brand">Permi<span>.</span></span>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#detects">What it detects</a></li>
+    <li><a href="#waitlist">Waitlist</a></li>
+    <li><a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a></li>
+    <li><a href="https://pypi.org/project/permi/" target="_blank">PyPI</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">Open Source · Free to Install · Built in Nigeria</div>
+
+  <h1>Security scanning that<br><em>Nigerian developers</em> actually use</h1>
+
+  <p class="hero-sub">
+    Permi scans your code for vulnerabilities and uses AI to filter out false
+    positives — so you only see findings that actually matter. No cloud. No login.
+    Just install and scan.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://pypi.org/project/permi/" target="_blank">
+      Install from PyPI
+    </a>
+    <a class="btn btn-secondary" href="https://github.com/Peternasarah/permi" target="_blank">
+      View on GitHub
+    </a>
+    <a class="btn btn-secondary" href="#waitlist">
+      Join the waitlist
+    </a>
+  </div>
+
+  <div class="install-block">
+    <span class="prompt">$</span>
+    <span id="install-cmd">pip install permi</span>
+    <button class="copy-btn" onclick="copyInstall()">copy</button>
+  </div>
+  <div class="install-note">Requires Python 3.9+ &nbsp;·&nbsp; Works on Windows, macOS, Linux</div>
+
+  <!-- Terminal demo -->
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="terminal-title">permi scan --path ./myapp</span>
+    </div>
+    <div class="terminal-body">
+      <div class="t-info">[Permi] Scanning : /home/peter/myapp</div>
+      <div class="t-info">[Permi] Engine found 9 raw finding(s) across 3 file(s)</div>
+      <div class="t-info">[Permi] Running AI filter on 9 finding(s)...</div>
+      <br>
+      <div><span class="t-ai">  [1/9] SQL001</span> <span class="t-ok">REAL</span>  &nbsp;String concatenation embeds user input in SQL query.</div>
+      <div><span class="t-ai">  [2/9] SEC001</span> <span class="t-ok">REAL</span>  &nbsp;Hardcoded credentials pose a critical security risk.</div>
+      <div><span class="t-ai">  [3/9] USSD001</span> <span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation needed.</div>
+      <div><span class="t-ai">  [4/9] INS003</span> <span class="t-ok">REAL</span>  &nbsp;eval() on user input allows arbitrary code execution.</div>
+      <div><span class="t-ai">  [5/9] XSS001</span> <span class="t-ok">REAL</span>  &nbsp;User input assigned to innerHTML without sanitisation.</div>
+      <br>
+      <div class="t-info">[Permi] Filter complete — 6 real &nbsp;|&nbsp; 3 false positive(s) removed</div>
+      <br>
+      <div><span class="t-high">  [HIGH]</span> <span class="t-file">SQL001</span> — app/auth.py line 8</div>
+      <div><span class="t-high">  [HIGH]</span> <span class="t-file">SEC001</span> — app/auth.py line 12</div>
+      <div><span class="t-high">  [HIGH]</span> <span class="t-file">INS003</span> — app/ussd.py line 11</div>
+      <div><span class="t-high">  [HIGH]</span> <span class="t-file">XSS001</span> — app/views.py line 11</div>
+      <div><span class="t-med">  [MEDIUM]</span> <span class="t-file">INS001</span> — app/views.py line 13</div>
+      <br>
+      <div class="t-ok">  Total findings: 6 &nbsp;(filtered 3 false positives) &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium</div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ── FEATURES ───────────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="section-label">Why Permi</div>
+  <h2>Built for how Nigerian developers actually work</h2>
+  <p>
+    Most security tools are built for enterprise teams in San Francisco.
+    Permi is built for developers in Lagos, Jos, Abuja, and everywhere else
+    who need real security tooling without the enterprise price tag.
+  </p>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI false-positive filter</h3>
+      <p>Every finding is reviewed by an LLM before you see it.
+         Real vulnerabilities surface. Noise disappears.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🇳🇬</div>
+      <h3>Nigerian-specific rules</h3>
+      <p>USSD gateway misconfigurations, Paystack and Flutterwave
+         credential exposure, NDPR-relevant checks. No foreign
+         scanner knows what to look for here.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💻</div>
+      <h3>Works offline</h3>
+      <p>No cloud backend. No login. Scan runs entirely on your machine.
+         Use <code>--offline</code> to skip AI calls when your
+         connection is slow.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>One command to scan</h3>
+      <p>Point Permi at a folder or a GitHub URL and get results in seconds.
+         No configuration files. No setup wizard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <h3>GitHub URL support</h3>
+      <p>Scan any public GitHub repository directly.
+         Permi clones it, scans it, and deletes the clone automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🆓</div>
+      <h3>Free and open source</h3>
+      <p>Install for free. Use forever. The core scanner engine
+         is open source. No credit card. No trial period.</p>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ── WHAT IT DETECTS ────────────────────────────────────────────────────── -->
+<section id="detects">
+  <div class="section-label">Detection</div>
+  <h2>What Permi finds in your code</h2>
+  <p>
+    17 rules across 5 categories. Every rule has been reviewed against
+    real Nigerian codebases. More rules ship with every release.
+  </p>
+
+  <div class="detection-grid">
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>SQL Injection</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          String concatenation, f-strings, % formatting in queries
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>Hardcoded Secrets</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          Passwords, API keys, AWS keys, Paystack/Flutterwave secrets
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>Cross-Site Scripting</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          innerHTML, document.write, Jinja2 |safe filter
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>Code Execution</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          eval(), exec(), pickle.loads() on untrusted input
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>SSL/TLS Disabled</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          verify=False in requests — exposes app to MITM attacks
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-medium">MED</span>
+      <div>
+        <strong>USSD Vulnerabilities</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          Unvalidated sessionId, phoneNumber, serviceCode
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-medium">MED</span>
+      <div>
+        <strong>Debug Mode in Production</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          debug=True exposes stack traces and interactive console
+        </span>
+      </div>
+    </div>
+    <div class="detection-item">
+      <span class="severity sev-high">HIGH</span>
+      <div>
+        <strong>Private Keys in Code</strong><br>
+        <span style="color:var(--muted);font-size:0.82rem">
+          PEM headers, RSA keys, OpenSSH private keys
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ── WAITLIST ───────────────────────────────────────────────────────────── -->
+<div class="waitlist-section" id="waitlist">
+  <div class="waitlist-inner">
+    <div class="section-label">Early access</div>
+    <h2>Join the Permi waitlist</h2>
+    <p>
+      Be the first to know when the VS Code extension, web dashboard,
+      and NDPR compliance reports launch. No spam. Unsubscribe anytime.
+    </p>
+    <div class="waitlist-form">
+      <input type="email" placeholder="your@email.com" id="waitlist-email" />
+      <a class="btn btn-primary"
+         id="waitlist-btn"
+         href="#"
+         onclick="submitWaitlist(event)">
+        Join waitlist
+      </a>
+    </div>
+    <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted)">
+      Already installed? Give us a ⭐ on
+      <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
+      — it helps more developers find Permi.
+    </p>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
+    <a href="https://pypi.org/project/permi/" target="_blank">PyPI</a>
+    <a href="https://github.com/Peternasarah/permi/issues" target="_blank">Report a bug</a>
+    <a href="https://github.com/Peternasarah/permi/blob/main/SECURITY.md" target="_blank">Security policy</a>
+    <a href="https://github.com/Peternasarah/permi/blob/main/LICENSE" target="_blank">License</a>
+  </div>
+  <p>
+    Built by
+    <a href="https://github.com/Peternasarah" target="_blank"> <b> Peter Nasarah Dashe</a></b>
+    · Student, University of Jos, Nigeria
+    &nbsp;·&nbsp;
+    <em>Built in Nigeria. For Nigeria. Then for the World.</em>
+  </p>
+</footer>
+
+<script>
+  // ── Copy install command ─────────────────────────────────────────────────
+  function copyInstall() {
+    navigator.clipboard.writeText('pip install permi').then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'copied!';
+      btn.style.color = '#3fb950';
+      setTimeout(() => {
+        btn.textContent = 'copy';
+        btn.style.color = '';
+      }, 2000);
+    });
+  }
+
+  // ── Waitlist form ────────────────────────────────────────────────────────
+  // Uses a Google Form as the free backend.
+  // Replace YOUR_FORM_ID and YOUR_ENTRY_ID with values from your Google Form.
+  // Instructions: see README after setup.
+  function submitWaitlist(e) {
+    e.preventDefault();
+    const email = document.getElementById('waitlist-email').value.trim();
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    // Replace these two values after creating your Google Form
+    const FORM_ID    = 'YOUR_FORM_ID';
+    const ENTRY_ID   = 'YOUR_ENTRY_ID';
+
+    const url = `https://docs.google.com/forms/d/${FORM_ID}/formResponse?${ENTRY_ID}=${encodeURIComponent(email)}&submit=Submit`;
+
+    fetch(url, { method: 'POST', mode: 'no-cors' })
+      .then(() => {
+        document.getElementById('waitlist-email').value = '';
+        document.getElementById('waitlist-btn').textContent = 'You are on the list!';
+        document.getElementById('waitlist-btn').style.background = '#3fb950';
+      })
+      .catch(() => {
+        // no-cors means fetch always "succeeds" — this catch is just safety
+        document.getElementById('waitlist-btn').textContent = 'You are on the list!';
+      });
+  }
+</script>
+
+</body>
+</html>
