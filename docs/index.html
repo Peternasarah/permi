@@ -681,10 +681,10 @@
     }
 
     // Replace these two values after creating your Google Form
-    const FORM_ID    = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
-    const ENTRY_ID   = '1647892528';
+    // const FORM_ID    = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
+    // const ENTRY_ID   = '1647892528';
 
-    const url = `https://docs.google.com/forms/d/${FORM_ID}/formResponse?${ENTRY_ID}=${encodeURIComponent(email)}&submit=Submit`;
+    const url = `https://docs.google.com/forms/d/e/1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ/viewform?usp=pp_url&entry.1647892528=test@example.com1`;
 
     fetch(url, { method: 'POST', mode: 'no-cors' })
       .then(() => {
