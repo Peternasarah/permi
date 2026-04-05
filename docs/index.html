@@ -137,6 +137,7 @@
       cursor: pointer;
       border: none;
       transition: opacity 0.15s, transform 0.1s;
+      text-decoration: none;
     }
 
     .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
@@ -290,7 +291,7 @@
       margin: 0;
     }
 
-    /* ── DETECTION TABLE ── */
+    /* ── DETECTION GRID ── */
     .detection-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -386,7 +387,6 @@
       flex-wrap: wrap;
     }
 
-    /* ── DIVIDER ── */
     hr { border: none; border-top: 1px solid var(--border); }
   </style>
 </head>
@@ -412,8 +412,8 @@
 
   <p class="hero-sub">
     Permi scans your code for vulnerabilities and uses AI to filter out false
-    positives — so you only see findings that actually matter. No cloud. No login.
-    Just install and scan.
+    positives — so you only see findings that actually matter.
+    No cloud. No login. Just install and scan.
   </p>
 
   <div class="hero-actions">
@@ -448,21 +448,21 @@
       <div class="t-info">[Permi] Engine found 9 raw finding(s) across 3 file(s)</div>
       <div class="t-info">[Permi] Running AI filter on 9 finding(s)...</div>
       <br>
-      <div><span class="t-ai">  [1/9] SQL001</span> <span class="t-ok">REAL</span>  &nbsp;String concatenation embeds user input in SQL query.</div>
-      <div><span class="t-ai">  [2/9] SEC001</span> <span class="t-ok">REAL</span>  &nbsp;Hardcoded credentials pose a critical security risk.</div>
-      <div><span class="t-ai">  [3/9] USSD001</span> <span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation needed.</div>
-      <div><span class="t-ai">  [4/9] INS003</span> <span class="t-ok">REAL</span>  &nbsp;eval() on user input allows arbitrary code execution.</div>
-      <div><span class="t-ai">  [5/9] XSS001</span> <span class="t-ok">REAL</span>  &nbsp;User input assigned to innerHTML without sanitisation.</div>
+      <div><span class="t-ai">  [1/9] SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;String concatenation embeds user input in SQL query.</div>
+      <div><span class="t-ai">  [2/9] SEC001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Hardcoded credentials pose a critical security risk.</div>
+      <div><span class="t-ai">  [3/9] USSD001</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation needed.</div>
+      <div><span class="t-ai">  [4/9] INS003</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;eval() on user input allows arbitrary code execution.</div>
+      <div><span class="t-ai">  [5/9] XSS001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;User input assigned to innerHTML without sanitisation.</div>
       <br>
       <div class="t-info">[Permi] Filter complete — 6 real &nbsp;|&nbsp; 3 false positive(s) removed</div>
       <br>
-      <div><span class="t-high">  [HIGH]</span> <span class="t-file">SQL001</span> — app/auth.py line 8</div>
-      <div><span class="t-high">  [HIGH]</span> <span class="t-file">SEC001</span> — app/auth.py line 12</div>
-      <div><span class="t-high">  [HIGH]</span> <span class="t-file">INS003</span> — app/ussd.py line 11</div>
-      <div><span class="t-high">  [HIGH]</span> <span class="t-file">XSS001</span> — app/views.py line 11</div>
-      <div><span class="t-med">  [MEDIUM]</span> <span class="t-file">INS001</span> — app/views.py line 13</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SQL001</span> — app/auth.py line 8</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SEC001</span> — app/auth.py line 12</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">INS003</span> — app/ussd.py line 11</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">XSS001</span> — app/views.py line 11</div>
+      <div><span class="t-med">  [MEDIUM]</span> &nbsp;<span class="t-file">INS001</span> — app/views.py line 13</div>
       <br>
-      <div class="t-ok">  Total findings: 6 &nbsp;(filtered 3 false positives) &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium</div>
+      <div class="t-ok">  Total: 6 findings &nbsp;(filtered 3 false positives) &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium</div>
     </div>
   </div>
 </section>
@@ -497,8 +497,8 @@
       <div class="feature-icon">💻</div>
       <h3>Works offline</h3>
       <p>No cloud backend. No login. Scan runs entirely on your machine.
-         Use <code>--offline</code> to skip AI calls when your
-         connection is slow.</p>
+         Use <code style="background:var(--bg);padding:0.1rem 0.3rem;border-radius:3px;">--offline</code>
+         to skip AI calls when your connection is slow.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
@@ -515,8 +515,8 @@
     <div class="feature-card">
       <div class="feature-icon">🆓</div>
       <h3>Free and open source</h3>
-      <p>Install for free. Use forever. The core scanner engine
-         is open source. No credit card. No trial period.</p>
+      <p>Install for free. Use forever. The core scanner engine is open
+         source. No credit card. No trial period.</p>
     </div>
   </div>
 </section>
@@ -619,17 +619,25 @@
       Be the first to know when the VS Code extension, web dashboard,
       and NDPR compliance reports launch. No spam. Unsubscribe anytime.
     </p>
+
     <div class="waitlist-form">
-      <input type="email" placeholder="your@email.com" id="waitlist-email" />
-      <a class="btn btn-primary"
-         id="waitlist-btn"
-         href="#"
-         onclick="submitWaitlist(event)">
+      <input
+        type="email"
+        id="waitlist-email"
+        placeholder="your@email.com"
+        autocomplete="email"
+      />
+      <button class="btn btn-primary" onclick="submitWaitlist()">
         Join waitlist
-      </a>
+      </button>
     </div>
+
+    <p id="waitlist-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--green);display:none;">
+      You are on the list! We will be in touch.
+    </p>
+
     <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted)">
-      Already installed? Give us a ⭐ on
+      Already installed? Give us a &#11088; on
       <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
       — it helps more developers find Permi.
     </p>
@@ -648,20 +656,28 @@
   <p>
     Built by
     <a href="https://github.com/Peternasarah" target="_blank">Peter Nasarah Dashe</a>
-    · University of Jos, Nigeria
+    &nbsp;·&nbsp; University of Jos, Nigeria
     &nbsp;·&nbsp;
     <em>Built in Nigeria. For Nigeria. Then for the World.</em>
   </p>
 </footer>
 
+<!-- Hidden iframe — receives the Google Form submission silently -->
+<iframe
+  id="hidden-iframe"
+  name="hidden-iframe"
+  style="display:none;"
+  title="Form submission target">
+</iframe>
+
 <script>
   // ── Copy install command ─────────────────────────────────────────────────
   function copyInstall() {
-    navigator.clipboard.writeText('pip install permi').then(() => {
-      const btn = document.querySelector('.copy-btn');
+    navigator.clipboard.writeText('pip install permi').then(function () {
+      var btn = document.querySelector('.copy-btn');
       btn.textContent = 'copied!';
       btn.style.color = '#3fb950';
-      setTimeout(() => {
+      setTimeout(function () {
         btn.textContent = 'copy';
         btn.style.color = '';
       }, 2000);
@@ -669,34 +685,36 @@
   }
 
   // ── Waitlist form ────────────────────────────────────────────────────────
-  // Uses a Google Form as the free backend.
-  // Replace YOUR_FORM_ID and YOUR_ENTRY_ID with values from your Google Form.
-  // Instructions: see README after setup.
-  function submitWaitlist(e) {
-    e.preventDefault();
-    const email = document.getElementById('waitlist-email').value.trim();
+  // Submits to Google Forms silently via a hidden iframe.
+  // The iframe receives the response so the user stays on this page.
+  function submitWaitlist() {
+    var email = document.getElementById('waitlist-email').value.trim();
+
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email address.');
       return;
     }
 
-    // Replace these two values after creating your Google Form
-    const FORM_ID    = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
-    const ENTRY_ID   = 'entry.1647892528';
+    var FORM_ID  = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
+    var ENTRY_ID = 'entry.1647892528';
 
-    const url = `https://docs.google.com/forms/d/${FORM_ID}/formResponse?${ENTRY_ID}=${encodeURIComponent(email)}&submit=Submit`;
+    // Point the hidden iframe at the Google Form submission URL.
+    // Google records the response; the iframe swallows the redirect.
+    var iframe = document.getElementById('hidden-iframe');
+    iframe.src =
+      'https://docs.google.com/forms/d/e/' + FORM_ID +
+      '/formResponse?' + ENTRY_ID + '=' + encodeURIComponent(email) +
+      '&submit=Submit';
 
-    fetch(url, { method: 'POST', mode: 'no-cors' })
-      .then(() => {
-        document.getElementById('waitlist-email').value = '';
-        document.getElementById('waitlist-btn').textContent = 'You are on the list!';
-        document.getElementById('waitlist-btn').style.background = '#3fb950';
-      })
-      .catch(() => {
-        // no-cors means fetch always "succeeds" — this catch is just safety
-        document.getElementById('waitlist-btn').textContent = 'You are on the list!';
-      });
+    // Clear the input and show the confirmation message
+    document.getElementById('waitlist-email').value = '';
+    document.getElementById('waitlist-msg').style.display = 'block';
   }
+
+  // Allow submitting with Enter key
+  document.getElementById('waitlist-email').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { submitWaitlist(); }
+  });
 </script>
 
 </body>
