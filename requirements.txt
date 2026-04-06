@@ -2,3 +2,5 @@ python-dotenv
 colorama
 click
 requests
+httpx
+beautifulsoup4

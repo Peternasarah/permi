@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.1.3"
+version = "0.2.0"
 description = "AI-powered vulnerability scanner for Nigerian developers and global SMBs"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -47,6 +47,8 @@ dependencies = [
     "colorama",
     "click",
     "requests",
+    "httpx",
+    "beautifulsoup4",
 ]
 
 [project.urls]

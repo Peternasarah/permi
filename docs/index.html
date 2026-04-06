@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Permi — AI-powered vulnerability scanner for Nigerian developers and global SMBs. Free to install. No cloud required." />
-  <meta property="og:title" content="Permi — Security scanning for Nigerian developers" />
-  <meta property="og:description" content="Scan your code for vulnerabilities in seconds. AI filters out the noise. Free and open source." />
+  <meta name="description" content="Permi — AI-powered vulnerability scanner for Nigerian developers and global SMBs. Scan live websites and source code. Free to install." />
+  <meta property="og:title" content="Permi — AI Security Scanner for Nigerian Developers" />
+  <meta property="og:description" content="Scan live websites and source code for vulnerabilities. AI filters out the noise. Free and open source." />
   <meta property="og:url" content="https://peternasarah.github.io/permi" />
   <title>Permi — AI Security Scanner</title>
   <style>
@@ -16,10 +16,10 @@
       --surface:   #161b22;
       --border:    #30363d;
       --blue:      #2f81f7;
-      --blue-dark: #1f6feb;
       --green:     #3fb950;
       --red:       #f85149;
       --yellow:    #d29922;
+      --purple:    #d2a8ff;
       --text:      #e6edf3;
       --muted:     #8b949e;
       --radius:    8px;
@@ -40,287 +40,208 @@
 
     /* ── NAV ── */
     nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(13, 17, 23, 0.92);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,17,23,0.92);
       backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--border);
       padding: 0 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       height: 56px;
     }
-
-    .nav-brand {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-
+    .nav-brand { font-size: 1.2rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
     .nav-brand span { color: var(--blue); }
-
-    .nav-links {
-      display: flex;
-      gap: 1.5rem;
-      list-style: none;
-    }
-
-    .nav-links a {
-      color: var(--muted);
-      font-size: 0.9rem;
-      transition: color 0.15s;
-    }
-
+    .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+    .nav-links a { color: var(--muted); font-size: 0.9rem; transition: color 0.15s; }
     .nav-links a:hover { color: var(--text); text-decoration: none; }
 
     /* ── HERO ── */
     .hero {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 6rem 2rem 4rem;
-      text-align: center;
+      max-width: 900px; margin: 0 auto;
+      padding: 5rem 2rem 4rem; text-align: center;
     }
-
     .hero-badge {
       display: inline-block;
-      background: rgba(47, 129, 247, 0.12);
-      border: 1px solid rgba(47, 129, 247, 0.3);
-      color: var(--blue);
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 0.3rem 0.9rem;
-      border-radius: 2rem;
-      margin-bottom: 1.5rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      background: rgba(47,129,247,0.12);
+      border: 1px solid rgba(47,129,247,0.3);
+      color: var(--blue); font-size: 0.78rem; font-weight: 600;
+      padding: 0.3rem 0.9rem; border-radius: 2rem;
+      margin-bottom: 1.5rem; letter-spacing: 0.05em; text-transform: uppercase;
     }
-
     .hero h1 {
-      font-size: clamp(2rem, 5vw, 3.2rem);
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.03em;
-      margin-bottom: 1.2rem;
+      font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+      line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.2rem;
     }
-
-    .hero h1 em {
-      font-style: normal;
-      color: var(--blue);
-    }
-
+    .hero h1 em { font-style: normal; color: var(--blue); }
     .hero-sub {
-      font-size: 1.15rem;
-      color: var(--muted);
-      max-width: 580px;
-      margin: 0 auto 2.5rem;
+      font-size: 1.1rem; color: var(--muted);
+      max-width: 600px; margin: 0 auto 2.5rem;
     }
-
     .hero-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 3rem;
+      display: flex; gap: 1rem; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 3rem;
     }
-
     .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.65rem 1.4rem;
-      border-radius: var(--radius);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 1.4rem; border-radius: var(--radius);
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      border: none; transition: opacity 0.15s, transform 0.1s;
       text-decoration: none;
     }
-
     .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
-    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary  { background: var(--blue); color: #fff; }
     .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
-    /* ── INSTALL BLOCK ── */
+    /* ── INSTALL ── */
     .install-block {
-      display: inline-flex;
-      align-items: center;
-      gap: 1rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.8rem 1.2rem;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 1rem;
-      color: var(--green);
-      margin-bottom: 0.8rem;
+      display: inline-flex; align-items: center; gap: 1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 0.8rem 1.2rem;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 1rem; color: var(--green); margin-bottom: 0.8rem;
     }
-
     .install-block .prompt { color: var(--muted); user-select: none; }
-
     .copy-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 0.75rem;
-      padding: 0.2rem 0.5rem;
+      background: none; border: 1px solid var(--border);
+      border-radius: 4px; color: var(--muted); cursor: pointer;
+      font-size: 0.75rem; padding: 0.2rem 0.5rem;
       transition: color 0.15s, border-color 0.15s;
     }
-
     .copy-btn:hover { color: var(--text); border-color: var(--text); }
+    .install-note { font-size: 0.82rem; color: var(--muted); }
 
-    .install-note {
-      font-size: 0.82rem;
-      color: var(--muted);
+    /* ── MODE TABS ── */
+    .mode-tabs {
+      display: flex; gap: 0.5rem; justify-content: center;
+      margin: 2.5rem 0 0;
     }
+    .mode-tab {
+      padding: 0.5rem 1.2rem; border-radius: var(--radius);
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--muted); transition: all 0.15s;
+    }
+    .mode-tab.active {
+      background: var(--blue); color: #fff; border-color: var(--blue);
+    }
+    .mode-tab:hover:not(.active) { color: var(--text); border-color: var(--text); }
 
-    /* ── TERMINAL DEMO ── */
+    /* ── TERMINAL ── */
     .terminal {
-      max-width: 780px;
-      margin: 3rem auto;
+      max-width: 820px; margin: 1.2rem auto 0;
       background: #010409;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      text-align: left;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; text-align: left;
+      display: none;
     }
-
+    .terminal.active { display: block; }
     .terminal-bar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0.6rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem;
     }
-
     .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot-red    { background: #ff5f56; }
-    .dot-yellow { background: #ffbd2e; }
-    .dot-green  { background: #27c93f; }
-
+    .dot-r { background: #ff5f56; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #27c93f; }
     .terminal-title {
-      color: var(--muted);
-      font-size: 0.8rem;
-      margin-left: auto;
-      margin-right: auto;
-      font-family: monospace;
+      color: var(--muted); font-size: 0.8rem;
+      margin: 0 auto; font-family: monospace;
     }
-
     .terminal-body {
       padding: 1.2rem 1.4rem;
       font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 0.85rem;
-      line-height: 1.7;
+      font-size: 0.82rem; line-height: 1.8;
     }
+    .t-info   { color: var(--muted); }
+    .t-high   { color: var(--red); font-weight: 600; }
+    .t-med    { color: var(--yellow); }
+    .t-ok     { color: var(--green); }
+    .t-ai     { color: var(--purple); }
+    .t-file   { color: #e3b341; }
+    .t-cmd    { color: #79c0ff; }
+    .t-dim    { color: #484f58; }
+    .t-white  { color: var(--text); font-weight: 600; }
 
-    .t-cmd   { color: #79c0ff; }
-    .t-info  { color: var(--muted); }
-    .t-high  { color: var(--red); font-weight: 600; }
-    .t-med   { color: var(--yellow); }
-    .t-ok    { color: var(--green); }
-    .t-ai    { color: #d2a8ff; }
-    .t-file  { color: #e3b341; }
-
-    /* ── SECTION ── */
-    section {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-    }
-
+    /* ── SECTIONS ── */
+    section { max-width: 1000px; margin: 0 auto; padding: 4rem 2rem; }
     .section-label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--blue);
-      margin-bottom: 0.8rem;
+      font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--blue); margin-bottom: 0.8rem;
     }
-
     section h2 {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 1rem;
+      font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 1rem;
     }
+    section > p { color: var(--muted); max-width: 620px; margin-bottom: 2rem; }
 
-    section p {
-      color: var(--muted);
-      max-width: 600px;
-      margin-bottom: 2rem;
+    /* ── MODE CARDS ── */
+    .mode-cards {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem; margin-top: 1.5rem;
     }
-
-    /* ── FEATURE GRID ── */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-
-    .feature-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.4rem;
+    @media (max-width: 640px) { .mode-cards { grid-template-columns: 1fr; } }
+    .mode-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem;
       transition: border-color 0.2s;
     }
+    .mode-card:hover { border-color: var(--blue); }
+    .mode-card-flag {
+      display: inline-block; font-family: monospace; font-size: 0.82rem;
+      background: rgba(47,129,247,0.1); color: var(--blue);
+      padding: 0.2rem 0.6rem; border-radius: 4px;
+      border: 1px solid rgba(47,129,247,0.2); margin-bottom: 0.8rem;
+    }
+    .mode-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .mode-card p  { font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem; }
+    .mode-card code {
+      display: block; font-family: monospace; font-size: 0.82rem;
+      background: var(--bg); color: var(--green);
+      padding: 0.5rem 0.8rem; border-radius: 4px;
+      border: 1px solid var(--border);
+    }
 
+    /* ── FEATURES ── */
+    .features {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem; margin-top: 2rem;
+    }
+    .feature-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem;
+      transition: border-color 0.2s;
+    }
     .feature-card:hover { border-color: var(--blue); }
-
-    .feature-icon {
-      font-size: 1.6rem;
-      margin-bottom: 0.8rem;
-    }
-
-    .feature-card h3 {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 0.4rem;
-    }
-
-    .feature-card p {
-      font-size: 0.88rem;
-      color: var(--muted);
-      margin: 0;
-    }
+    .feature-icon { font-size: 1.6rem; margin-bottom: 0.8rem; }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .feature-card p  { font-size: 0.88rem; color: var(--muted); margin: 0; }
 
     /* ── DETECTION GRID ── */
-    .detection-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.7rem;
-      margin-top: 1.5rem;
+    .detection-cols {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1.5rem; margin-top: 1.5rem;
     }
-
+    @media (max-width: 640px) { .detection-cols { grid-template-columns: 1fr; } }
+    .detection-group h4 {
+      font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 0.8rem; padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
     .detection-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.7rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.9rem 1rem;
-      font-size: 0.88rem;
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 0.8rem 0.9rem;
+      font-size: 0.87rem; margin-bottom: 0.5rem;
     }
-
-    .detection-item .severity {
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.15rem 0.4rem;
-      border-radius: 3px;
-      white-space: nowrap;
-      margin-top: 2px;
+    .sev {
+      font-size: 0.68rem; font-weight: 700;
+      padding: 0.15rem 0.4rem; border-radius: 3px;
+      white-space: nowrap; margin-top: 2px;
     }
-
-    .sev-high   { background: rgba(248,81,73,0.15);  color: var(--red);    }
-    .sev-medium { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .sev-high { background: rgba(248,81,73,0.15);  color: var(--red);    }
+    .sev-med  { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .sev-low  { background: rgba(47,129,247,0.12); color: var(--blue);   }
 
     /* ── WAITLIST ── */
     .waitlist-section {
@@ -328,65 +249,34 @@
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
     }
-
     .waitlist-inner {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-      text-align: center;
+      max-width: 600px; margin: 0 auto;
+      padding: 4rem 2rem; text-align: center;
     }
-
     .waitlist-inner h2 { margin-bottom: 0.6rem; }
-
-    .waitlist-inner p {
-      color: var(--muted);
-      margin-bottom: 1.8rem;
-      max-width: 100%;
-    }
-
-    .waitlist-form {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
+    .waitlist-inner > p { color: var(--muted); margin-bottom: 1.8rem; max-width: 100%; }
+    .waitlist-form { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
     .waitlist-form input {
-      flex: 1;
-      min-width: 220px;
-      padding: 0.65rem 1rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.15s;
+      flex: 1; min-width: 220px; padding: 0.65rem 1rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-size: 0.95rem; outline: none; transition: border-color 0.15s;
     }
-
     .waitlist-form input:focus { border-color: var(--blue); }
     .waitlist-form input::placeholder { color: var(--muted); }
 
     /* ── FOOTER ── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 2rem;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.85rem;
+      padding: 2rem; text-align: center;
+      color: var(--muted); font-size: 0.85rem;
     }
-
     footer a { color: var(--muted); }
     footer a:hover { color: var(--text); }
-
     .footer-links {
-      display: flex;
-      gap: 1.5rem;
-      justify-content: center;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
+      display: flex; gap: 1.5rem; justify-content: center;
+      margin-bottom: 1rem; flex-wrap: wrap;
     }
-
     hr { border: none; border-top: 1px solid var(--border); }
   </style>
 </head>
@@ -396,6 +286,7 @@
 <nav>
   <span class="nav-brand">Permi<span>.</span></span>
   <ul class="nav-links">
+    <li><a href="#modes">Scan modes</a></li>
     <li><a href="#features">Features</a></li>
     <li><a href="#detects">What it detects</a></li>
     <li><a href="#waitlist">Waitlist</a></li>
@@ -411,8 +302,8 @@
   <h1>Security scanning that<br><em>Nigerian developers</em> actually use</h1>
 
   <p class="hero-sub">
-    Permi scans your code for vulnerabilities and uses AI to filter out false
-    positives — so you only see findings that actually matter.
+    Permi scans live websites and source code for vulnerabilities, then uses
+    AI to filter out false positives — so you only see findings that matter.
     No cloud. No login. Just install and scan.
   </p>
 
@@ -433,24 +324,79 @@
     <span id="install-cmd">pip install permi</span>
     <button class="copy-btn" onclick="copyInstall()">copy</button>
   </div>
-  <div class="install-note">Requires Python 3.9+ &nbsp;·&nbsp; Works on Windows, macOS, Linux</div>
+  <div class="install-note">Requires Python 3.9+ &nbsp;·&nbsp; Windows, macOS, Linux</div>
 
-  <!-- Terminal demo -->
-  <div class="terminal">
+  <!-- Mode tabs + terminal demos -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="showMode('url')">
+      --url &nbsp; Live website scan
+    </button>
+    <button class="mode-tab" onclick="showMode('path')">
+      --path &nbsp; Source code scan
+    </button>
+  </div>
+
+  <!-- URL DEMO -->
+  <div class="terminal active" id="demo-url">
     <div class="terminal-bar">
-      <div class="dot dot-red"></div>
-      <div class="dot dot-yellow"></div>
-      <div class="dot dot-green"></div>
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="terminal-title">permi scan --url https://yoursite.com</span>
+    </div>
+    <div class="terminal-body">
+      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗</div>
+      <div class="t-dim">  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
+      <div class="t-dim">  ██████╔╝█████╗  ██████╔╝██╔████╔██║██║</div>
+      <div class="t-dim">  ██╔═══╝ ██╔══╝  ██╔══██╗██║╚██╔╝██║██║</div>
+      <div class="t-dim">  ██║     ███████╗██║  ██║██║ ╚═╝ ██║██║</div>
+      <div class="t-dim">  ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝</div>
+      <br>
+      <div class="t-info">[Permi] Mode     : Web scan (active HTTP testing)</div>
+      <div class="t-info">[Permi] Target   : https://yoursite.com</div>
+      <div class="t-info">[Permi] Crawl    : up to 30 pages</div>
+      <br>
+      <div class="t-info">[Permi] Engine found 4 raw finding(s)</div>
+      <div class="t-info">[Permi] Running AI filter on 4 finding(s)...</div>
+      <br>
+      <div><span class="t-ai">  [1/4] WEB_SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;SQL error returned when quote injected into 'id' parameter.</div>
+      <div><span class="t-ai">  [2/4] WEB_XSS001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Payload reflected unencoded in HTML response.</div>
+      <div><span class="t-ai">  [3/4] WEB_HDR001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;HSTS, CSP, and X-Frame-Options headers are missing.</div>
+      <div><span class="t-ai">  [4/4] WEB_HDR002</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;Server header present but no version disclosed — not exploitable.</div>
+      <br>
+      <div class="t-info">[Permi] Filter complete — 3 real &nbsp;|&nbsp; 1 false positive removed</div>
+      <br>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_SQL001</span> — /search?id=1 — SQL Injection (Error-based)</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_XSS001</span> — /search?q=test — Reflected XSS</div>
+      <div><span class="t-med">  [MEDIUM]</span> &nbsp;<span class="t-file">WEB_HDR001</span> — Missing Security Headers</div>
+      <br>
+      <div class="t-ok">  Total: 3 findings &nbsp;·&nbsp; 2 high &nbsp;·&nbsp; 1 medium &nbsp;·&nbsp; 1 FP removed</div>
+    </div>
+  </div>
+
+  <!-- PATH DEMO -->
+  <div class="terminal" id="demo-path">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
       <span class="terminal-title">permi scan --path ./myapp</span>
     </div>
     <div class="terminal-body">
+      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗</div>
+      <div class="t-dim">  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
+      <div class="t-dim">  ██████╔╝█████╗  ██████╔╝██╔████╔██║██║</div>
+      <div class="t-dim">  ██╔═══╝ ██╔══╝  ██╔══██╗██║╚██╔╝██║██║</div>
+      <div class="t-dim">  ██║     ███████╗██║  ██║██║ ╚═╝ ██║██║</div>
+      <div class="t-dim">  ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝</div>
+      <br>
       <div class="t-info">[Permi] Scanning : /home/peter/myapp</div>
       <div class="t-info">[Permi] Engine found 9 raw finding(s) across 3 file(s)</div>
       <div class="t-info">[Permi] Running AI filter on 9 finding(s)...</div>
       <br>
-      <div><span class="t-ai">  [1/9] SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;String concatenation embeds user input in SQL query.</div>
-      <div><span class="t-ai">  [2/9] SEC001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Hardcoded credentials pose a critical security risk.</div>
-      <div><span class="t-ai">  [3/9] USSD001</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation needed.</div>
+      <div><span class="t-ai">  [1/9] SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;String concatenation embeds user input into SQL query.</div>
+      <div><span class="t-ai">  [2/9] SEC001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Hardcoded database password poses a critical security risk.</div>
+      <div><span class="t-ai">  [3/9] USSD001</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation risk here.</div>
       <div><span class="t-ai">  [4/9] INS003</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;eval() on user input allows arbitrary code execution.</div>
       <div><span class="t-ai">  [5/9] XSS001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;User input assigned to innerHTML without sanitisation.</div>
       <br>
@@ -460,9 +406,44 @@
       <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SEC001</span> — app/auth.py line 12</div>
       <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">INS003</span> — app/ussd.py line 11</div>
       <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">XSS001</span> — app/views.py line 11</div>
-      <div><span class="t-med">  [MEDIUM]</span> &nbsp;<span class="t-file">INS001</span> — app/views.py line 13</div>
       <br>
-      <div class="t-ok">  Total: 6 findings &nbsp;(filtered 3 false positives) &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium</div>
+      <div class="t-ok">  Total: 6 findings &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium &nbsp;·&nbsp; 3 FPs removed</div>
+    </div>
+  </div>
+
+</section>
+
+<hr>
+
+<!-- ── TWO MODES ───────────────────────────────────────────────────────────── -->
+<section id="modes">
+  <div class="section-label">Two scan modes</div>
+  <h2>Scan websites live or scan code before it ships</h2>
+  <p>
+    Most security tools do one or the other. Permi does both — from a single
+    install, with a single CLI command.
+  </p>
+
+  <div class="mode-cards">
+    <div class="mode-card">
+      <div class="mode-card-flag">--url</div>
+      <h3>Live web scanning</h3>
+      <p>
+        Point Permi at any website. It crawls the pages, injects test payloads
+        into parameters, and checks security headers on the running application.
+        No source code access needed.
+      </p>
+      <code>permi scan --url https://yoursite.com</code>
+    </div>
+    <div class="mode-card">
+      <div class="mode-card-flag">--path</div>
+      <h3>Static source scanning</h3>
+      <p>
+        Point Permi at a local folder or GitHub URL. It reads your code,
+        matches vulnerability patterns, and catches issues before they ever
+        reach production.
+      </p>
+      <code>permi scan --path ./myapp</code>
     </div>
   </div>
 </section>
@@ -474,9 +455,9 @@
   <div class="section-label">Why Permi</div>
   <h2>Built for how Nigerian developers actually work</h2>
   <p>
-    Most security tools are built for enterprise teams in San Francisco.
-    Permi is built for developers in Lagos, Jos, Abuja, and everywhere else
-    who need real security tooling without the enterprise price tag.
+    Most security tools were built for enterprise teams in San Francisco.
+    Permi was built for developers in Lagos, Jos, Abuja — and everywhere else
+    where good security tooling should not cost more than a developer earns.
   </p>
 
   <div class="features">
@@ -487,36 +468,36 @@
          Real vulnerabilities surface. Noise disappears.</p>
     </div>
     <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <h3>Live web scanning</h3>
+      <p>Crawls pages, tests SQL injection payloads, checks XSS, and
+         audits security headers on any running website.</p>
+    </div>
+    <div class="feature-card">
       <div class="feature-icon">🇳🇬</div>
       <h3>Nigerian-specific rules</h3>
-      <p>USSD gateway misconfigurations, Paystack and Flutterwave
-         credential exposure, NDPR-relevant checks. No foreign
-         scanner knows what to look for here.</p>
+      <p>USSD gateway vulnerabilities, Paystack and Flutterwave secret
+         key detection, NDPR-relevant checks. No foreign scanner
+         understands this market.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">💻</div>
       <h3>Works offline</h3>
-      <p>No cloud backend. No login. Scan runs entirely on your machine.
+      <p>No cloud backend. No login. Scans run on your machine.
          Use <code style="background:var(--bg);padding:0.1rem 0.3rem;border-radius:3px;">--offline</code>
          to skip AI calls when your connection is slow.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h3>One command to scan</h3>
-      <p>Point Permi at a folder or a GitHub URL and get results in seconds.
-         No configuration files. No setup wizard.</p>
-    </div>
-    <div class="feature-card">
       <div class="feature-icon">🔗</div>
       <h3>GitHub URL support</h3>
-      <p>Scan any public GitHub repository directly.
-         Permi clones it, scans it, and deletes the clone automatically.</p>
+      <p>Scan any public GitHub repository directly. Permi clones it,
+         scans it, and deletes the clone automatically.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🆓</div>
       <h3>Free and open source</h3>
-      <p>Install for free. Use forever. The core scanner engine is open
-         source. No credit card. No trial period.</p>
+      <p>Install for free. Use forever. The core scanner engine is
+         open source. No credit card. No trial period.</p>
     </div>
   </div>
 </section>
@@ -526,83 +507,92 @@
 <!-- ── WHAT IT DETECTS ────────────────────────────────────────────────────── -->
 <section id="detects">
   <div class="section-label">Detection</div>
-  <h2>What Permi finds in your code</h2>
+  <h2>What Permi finds</h2>
   <p>
-    17 rules across 5 categories. Every rule has been reviewed against
-    real Nigerian codebases. More rules ship with every release.
+    Coverage across both scan modes. Web scanning tests your running
+    application. Source scanning catches issues before they ship.
   </p>
 
-  <div class="detection-grid">
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>SQL Injection</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          String concatenation, f-strings, % formatting in queries
-        </span>
+  <div class="detection-cols">
+    <!-- Web scan -->
+    <div class="detection-group">
+      <h4>🌐 Web scan (--url)</h4>
+      <div class="detection-item">
+        <span class="sev sev-high">HIGH</span>
+        <div>
+          <strong>SQL Injection</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            Error-based, boolean-based blind, time-based blind
+          </span>
+        </div>
+      </div>
+      <div class="detection-item">
+        <span class="sev sev-high">HIGH</span>
+        <div>
+          <strong>Reflected XSS</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            Context-aware payload testing across all parameters
+          </span>
+        </div>
+      </div>
+      <div class="detection-item">
+        <span class="sev sev-med">MED</span>
+        <div>
+          <strong>Missing Security Headers</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            HSTS, CSP, X-Frame-Options, X-Content-Type-Options
+          </span>
+        </div>
+      </div>
+      <div class="detection-item">
+        <span class="sev sev-low">LOW</span>
+        <div>
+          <strong>Server Information Disclosure</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            Server and X-Powered-By header leakage
+          </span>
+        </div>
       </div>
     </div>
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>Hardcoded Secrets</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          Passwords, API keys, AWS keys, Paystack/Flutterwave secrets
-        </span>
+
+    <!-- Source scan -->
+    <div class="detection-group">
+      <h4>📁 Source scan (--path)</h4>
+      <div class="detection-item">
+        <span class="sev sev-high">HIGH</span>
+        <div>
+          <strong>SQL Injection in Code</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            String concat, f-strings, % formatting in queries
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>Cross-Site Scripting</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          innerHTML, document.write, Jinja2 |safe filter
-        </span>
+      <div class="detection-item">
+        <span class="sev sev-high">HIGH</span>
+        <div>
+          <strong>Hardcoded Secrets</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            Passwords, API keys, AWS keys, Paystack/Flutterwave keys
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>Code Execution</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          eval(), exec(), pickle.loads() on untrusted input
-        </span>
+      <div class="detection-item">
+        <span class="sev sev-high">HIGH</span>
+        <div>
+          <strong>Code Execution & XSS</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            eval(), exec(), innerHTML, pickle.loads()
+          </span>
+        </div>
       </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>SSL/TLS Disabled</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          verify=False in requests — exposes app to MITM attacks
-        </span>
-      </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-medium">MED</span>
-      <div>
-        <strong>USSD Vulnerabilities</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          Unvalidated sessionId, phoneNumber, serviceCode
-        </span>
-      </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-medium">MED</span>
-      <div>
-        <strong>Debug Mode in Production</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          debug=True exposes stack traces and interactive console
-        </span>
-      </div>
-    </div>
-    <div class="detection-item">
-      <span class="severity sev-high">HIGH</span>
-      <div>
-        <strong>Private Keys in Code</strong><br>
-        <span style="color:var(--muted);font-size:0.82rem">
-          PEM headers, RSA keys, OpenSSH private keys
-        </span>
+      <div class="detection-item">
+        <span class="sev sev-med">MED</span>
+        <div>
+          <strong>USSD Vulnerabilities</strong><br>
+          <span style="color:var(--muted);font-size:0.82rem">
+            Unvalidated sessionId, phoneNumber, serviceCode
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -616,26 +606,16 @@
     <div class="section-label">Early access</div>
     <h2>Join the Permi waitlist</h2>
     <p>
-      Be the first to know when the VS Code extension, web dashboard,
-      and NDPR compliance reports launch. No spam. Unsubscribe anytime.
+      Be the first to know when the VS Code extension, NDPR compliance
+      reports, and Pro tier launch. No spam. Unsubscribe anytime.
     </p>
-
     <div class="waitlist-form">
-      <input
-        type="email"
-        id="waitlist-email"
-        placeholder="your@email.com"
-        autocomplete="email"
-      />
-      <button class="btn btn-primary" onclick="submitWaitlist()">
-        Join waitlist
-      </button>
+      <input type="email" id="waitlist-email" placeholder="your@email.com" autocomplete="email" />
+      <button class="btn btn-primary" onclick="submitWaitlist()">Join waitlist</button>
     </div>
-
     <p id="waitlist-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--green);display:none;">
       You are on the list! We will be in touch.
     </p>
-
     <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted)">
       Already installed? Give us a &#11088; on
       <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
@@ -662,22 +642,26 @@
   </p>
 </footer>
 
-<!-- Hidden iframe — receives the Google Form submission silently -->
-<iframe
-  id="hidden-iframe"
-  name="hidden-iframe"
-  style="display:none;"
-  title="Form submission target">
-</iframe>
+<!-- Hidden iframe for Google Forms submission -->
+<iframe id="hidden-iframe" name="hidden-iframe" style="display:none;" title="Form submission"></iframe>
 
 <script>
+  // ── Mode tab toggle ──────────────────────────────────────────────────────
+  function showMode(mode) {
+    document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.terminal').forEach(function(t) { t.classList.remove('active'); });
+
+    event.target.classList.add('active');
+    document.getElementById('demo-' + mode).classList.add('active');
+  }
+
   // ── Copy install command ─────────────────────────────────────────────────
   function copyInstall() {
-    navigator.clipboard.writeText('pip install permi').then(function () {
+    navigator.clipboard.writeText('pip install permi').then(function() {
       var btn = document.querySelector('.copy-btn');
       btn.textContent = 'copied!';
       btn.style.color = '#3fb950';
-      setTimeout(function () {
+      setTimeout(function() {
         btn.textContent = 'copy';
         btn.style.color = '';
       }, 2000);
@@ -685,34 +669,25 @@
   }
 
   // ── Waitlist form ────────────────────────────────────────────────────────
-  // Submits to Google Forms silently via a hidden iframe.
-  // The iframe receives the response so the user stays on this page.
   function submitWaitlist() {
     var email = document.getElementById('waitlist-email').value.trim();
-
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email address.');
       return;
     }
-
     var FORM_ID  = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
     var ENTRY_ID = 'entry.1647892528';
-
-    // Point the hidden iframe at the Google Form submission URL.
-    // Google records the response; the iframe swallows the redirect.
-    var iframe = document.getElementById('hidden-iframe');
-    iframe.src =
+    var iframe   = document.getElementById('hidden-iframe');
+    iframe.src   =
       'https://docs.google.com/forms/d/e/' + FORM_ID +
       '/formResponse?' + ENTRY_ID + '=' + encodeURIComponent(email) +
       '&submit=Submit';
-
-    // Clear the input and show the confirmation message
     document.getElementById('waitlist-email').value = '';
     document.getElementById('waitlist-msg').style.display = 'block';
   }
 
-  // Allow submitting with Enter key
-  document.getElementById('waitlist-email').addEventListener('keydown', function (e) {
+  // Allow Enter key on waitlist input
+  document.getElementById('waitlist-email').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { submitWaitlist(); }
   });
 </script>
