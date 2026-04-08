@@ -91,8 +91,12 @@ def analyse(finding: dict) -> dict:
         explanation = lines[1].strip() if len(lines) > 1 else "No explanation provided."
 
         if verdict not in ("REAL", "FP"):
-            verdict     = "REAL"
-            explanation = f"Unexpected verdict '{verdict}' — defaulting to REAL."
+            # BUG FIX: Save the original invalid verdict before reassigning
+            # This ensures the error message shows the actual invalid verdict
+            # instead of always showing "REAL"
+            invalid_verdict = verdict
+            verdict         = "REAL"
+            explanation     = f"Unexpected verdict '{invalid_verdict}' — defaulting to REAL."
 
         finding["ai_verdict"]     = verdict
         finding["ai_explanation"] = explanation
