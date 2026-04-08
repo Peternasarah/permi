@@ -1,7 +1,7 @@
 # scanner/rules.py
-# Each rule has: id, name, pattern (regex), severity, description
-# Patterns are intentionally broad — the AI filter in Phase 1 will
-# remove false positives. Better to over-catch than under-catch here.
+# Vulnerability detection rules for Permi's static source scanner.
+# Each rule has: id, name, pattern (regex), severity, description.
+# Patterns are intentionally broad — the AI filter removes false positives.
 
 import re
 
@@ -59,10 +59,7 @@ RULES = [
             "innerHTML is set dynamically. If any part of the value comes "
             "from user input, this is a direct XSS vector."
         ),
-        "pattern": re.compile(
-            r'\.innerHTML\s*=',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'\.innerHTML\s*=', re.IGNORECASE),
     },
     {
         "id": "XSS002",
@@ -72,23 +69,17 @@ RULES = [
             "document.write() is called with a variable. "
             "Writing user-controlled content to the page enables XSS."
         ),
-        "pattern": re.compile(
-            r'document\.write\s*\(\s*\w',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'document\.write\s*\(\s*\w', re.IGNORECASE),
     },
     {
         "id": "XSS003",
-        "name": "XSS — Flask render without escape (Jinja2 | safe filter)",
+        "name": "XSS — Flask/Jinja2 |safe filter",
         "severity": "medium",
         "description": (
             "The Jinja2 |safe filter disables auto-escaping. "
             "If the variable contains user input, this enables XSS."
         ),
-        "pattern": re.compile(
-            r'\|\s*safe',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'\|\s*safe', re.IGNORECASE),
     },
 
     # ── HARDCODED SECRETS ─────────────────────────────────────────────────────
@@ -116,9 +107,7 @@ RULES = [
             "A string matching the format of an AWS Access Key ID was found. "
             "Exposed AWS keys can lead to full account compromise."
         ),
-        "pattern": re.compile(
-            r'AKIA[0-9A-Z]{16}',
-        ),
+        "pattern": re.compile(r'AKIA[0-9A-Z]{16}'),
     },
     {
         "id": "SEC003",
@@ -129,7 +118,7 @@ RULES = [
             "Private keys must never be committed to a repository."
         ),
         "pattern": re.compile(
-            r'-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----',
+            r'-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
         ),
     },
     {
@@ -140,8 +129,19 @@ RULES = [
             "A Paystack or Flutterwave secret key pattern was found. "
             "Exposed payment gateway keys allow fraudulent transactions."
         ),
+        "pattern": re.compile(r'(sk_live_|sk_test_)[a-zA-Z0-9]{20,}'),
+    },
+    {
+        "id": "SEC005",
+        "name": "Hardcoded secret — .env file with sensitive assignment",
+        "severity": "high",
+        "description": (
+            "A .env file contains what appears to be a sensitive key or "
+            "password assignment. .env files should never be committed."
+        ),
         "pattern": re.compile(
-            r'(sk_live_|sk_test_)[a-zA-Z0-9]{20,}',
+            r'^(SECRET|PASSWORD|API_KEY|PRIVATE_KEY|TOKEN|AUTH)\s*=\s*.+$',
+            re.IGNORECASE | re.MULTILINE
         ),
     },
 
@@ -188,10 +188,7 @@ RULES = [
             "Debug mode exposes stack traces and an interactive console "
             "to anyone who triggers an error."
         ),
-        "pattern": re.compile(
-            r'debug\s*=\s*True',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'debug\s*=\s*True', re.IGNORECASE),
     },
     {
         "id": "INS002",
@@ -203,8 +200,7 @@ RULES = [
             "to man-in-the-middle attacks."
         ),
         "pattern": re.compile(
-            r'requests\.\w+\(.*verify\s*=\s*False',
-            re.IGNORECASE
+            r'requests\.\w+\(.*verify\s*=\s*False', re.IGNORECASE
         ),
     },
     {
@@ -215,10 +211,7 @@ RULES = [
             "eval() is called with a variable argument. If the variable "
             "contains user-supplied data, this allows arbitrary code execution."
         ),
-        "pattern": re.compile(
-            r'eval\s*\(\s*\w',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'eval\s*\(\s*\w', re.IGNORECASE),
     },
     {
         "id": "INS004",
@@ -227,10 +220,7 @@ RULES = [
         "description": (
             "exec() is called with a variable argument — same risk as eval()."
         ),
-        "pattern": re.compile(
-            r'exec\s*\(\s*\w',
-            re.IGNORECASE
-        ),
+        "pattern": re.compile(r'exec\s*\(\s*\w', re.IGNORECASE),
     },
     {
         "id": "INS005",
@@ -238,31 +228,64 @@ RULES = [
         "severity": "high",
         "description": (
             "pickle.loads() deserializes data. If the data comes from "
-            "an untrusted source (network, user upload), this allows "
-            "arbitrary code execution."
+            "an untrusted source, this allows arbitrary code execution."
+        ),
+        "pattern": re.compile(r'pickle\.loads\s*\(', re.IGNORECASE),
+    },
+    {
+        "id": "INS006",
+        "name": "Insecure — subprocess with shell=True",
+        "severity": "high",
+        "description": (
+            "subprocess is called with shell=True. If any part of the "
+            "command string contains user input, this allows command injection."
         ),
         "pattern": re.compile(
-            r'pickle\.loads\s*\(',
+            r'subprocess\.(run|call|Popen|check_output)\s*\(.*shell\s*=\s*True',
             re.IGNORECASE
         ),
+    },
+    {
+        "id": "INS007",
+        "name": "Insecure — os.system() with variable",
+        "severity": "high",
+        "description": (
+            "os.system() is called with a variable argument. "
+            "If the variable contains user input, this enables command injection."
+        ),
+        "pattern": re.compile(r'os\.system\s*\(\s*\w', re.IGNORECASE),
     },
 ]
 
 # ── FILE EXTENSIONS TO SCAN ───────────────────────────────────────────────────
-# Permi only reads these file types. Binary files, images, and lockfiles
-# are skipped automatically.
+# Expanded to cover all common project types including mobile, backend, config.
 
 SCANNABLE_EXTENSIONS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx",
-    ".html", ".htm", ".php", ".java",
-    ".env", ".yml", ".yaml", ".json",
+    # Python
+    ".py",
+    # JavaScript / TypeScript
+    ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs",
+    # Web
+    ".html", ".htm", ".vue", ".svelte",
+    # Backend languages
+    ".php", ".java", ".rb", ".go", ".cs", ".cpp", ".c",
+    # Mobile
+    ".dart", ".kt", ".swift",
+    # Config / secrets
+    ".env", ".env.local", ".env.production", ".env.development",
+    ".yml", ".yaml", ".toml",
+    # Data / API
+    ".json", ".graphql", ".gql",
+    # Shell scripts
+    ".sh", ".bash",
 }
 
 # ── DIRECTORIES TO SKIP ───────────────────────────────────────────────────────
-# These folders are never scanned — they contain dependencies or build
-# artifacts, not your actual code.
+# These folders are never scanned — they contain dependencies or build artifacts.
 
 SKIP_DIRS = {
-    "node_modules", "venv", ".venv", "__pycache__",
-    ".git", "dist", "build", ".next", "target",
+    "node_modules", "venv", ".venv", "env", "__pycache__",
+    ".git", "dist", "build", ".next", "target", ".dart_tool",
+    "ios", "android", ".gradle", "Pods", ".pub-cache",
+    "coverage", ".nyc_output", "out", ".output",
 }

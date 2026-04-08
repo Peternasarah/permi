@@ -3,31 +3,20 @@
 # Sends a finding to OpenRouter and returns a verdict:
 #   REAL  — this is a genuine vulnerability
 #   FP    — this is a false positive, ignore it
+#
+# API key is loaded via config.py priority chain.
+# If no key found anywhere, defaults to REAL (safe fallback).
 
-import os
 import json
 import requests
-from dotenv import load_dotenv
+from db.config import get_api_key
 
-load_dotenv()
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
-
-# We use DeepSeek V3 — fast, cheap, and very good at code analysis.
-# You can swap this for any model on openrouter.ai/models
-MODEL = "deepseek/deepseek-chat"
-
-# How many seconds to wait for the API before giving up
-TIMEOUT = 30
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL          = "deepseek/deepseek-chat"
+TIMEOUT        = 30
 
 
 def _build_prompt(finding: dict) -> str:
-    """
-    Build the prompt we send to the LLM for a single finding.
-    The prompt is structured so the model returns a predictable format
-    we can parse reliably.
-    """
     return f"""You are a senior application security engineer reviewing automated scan results.
 
 A static analysis tool flagged the following finding. Your job is to decide if this is a REAL vulnerability or a FALSE POSITIVE (FP).
@@ -46,10 +35,6 @@ Instructions:
 - On the second line, write one short sentence (max 20 words) explaining your verdict
 - Do not write anything else
 
-Example response:
-REAL
-The string concatenation directly embeds user input into a SQL query with no sanitisation.
-
 Your verdict:"""
 
 
@@ -58,13 +43,14 @@ def analyse(finding: dict) -> dict:
     Send one finding to the LLM and return the finding dict
     updated with ai_verdict and ai_explanation.
 
-    If the API call fails for any reason (no key, network error,
-    bad response), we default to REAL so nothing gets silently dropped.
+    If the API call fails for any reason, we default to REAL
+    so nothing gets silently dropped.
     """
-    # If no API key is configured, skip the filter entirely
-    if not OPENROUTER_API_KEY:
+    api_key = get_api_key()
+
+    if not api_key:
         finding["ai_verdict"]     = "REAL"
-        finding["ai_explanation"] = "No API key — AI filter skipped."
+        finding["ai_explanation"] = "No API key found — AI filter skipped."
         return finding
 
     prompt = _build_prompt(finding)
@@ -73,18 +59,16 @@ def analyse(finding: dict) -> dict:
         response = requests.post(
             OPENROUTER_URL,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type":  "application/json",
-                "HTTP-Referer":  "https://github.com/permi",   # required by OpenRouter
+                "HTTP-Referer":  "https://github.com/Peternasarah/permi",
                 "X-Title":       "Permi Security Scanner",
             },
             json={
-                "model": MODEL,
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0,     # we want deterministic, not creative
-                "max_tokens":  60,    # verdict + one sentence is plenty
+                "model":       MODEL,
+                "messages":    [{"role": "user", "content": prompt}],
+                "temperature": 0,
+                "max_tokens":  60,
             },
             timeout=TIMEOUT,
         )
@@ -100,15 +84,12 @@ def analyse(finding: dict) -> dict:
         finding["ai_explanation"] = f"API error — defaulting to REAL. ({e})"
         return finding
 
-    # ── Parse the response ────────────────────────────────────────────────────
     try:
-        content = response.json()["choices"][0]["message"]["content"].strip()
-        lines   = content.splitlines()
-
+        content     = response.json()["choices"][0]["message"]["content"].strip()
+        lines       = content.splitlines()
         verdict     = lines[0].strip().upper()
         explanation = lines[1].strip() if len(lines) > 1 else "No explanation provided."
 
-        # Normalise — if the model returns anything unexpected, treat as REAL
         if verdict not in ("REAL", "FP"):
             verdict     = "REAL"
             explanation = f"Unexpected verdict '{verdict}' — defaulting to REAL."

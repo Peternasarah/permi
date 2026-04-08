@@ -1,38 +1,51 @@
 # db/database.py
 # Handles all database creation and connection logic.
-# The database file (permi.db) is created automatically in the
-# project root the first time this module is imported.
+#
+# Database location: ~/.permi/permi.db
+# This works correctly whether Permi was installed via pip or run from source.
+# The ~/.permi directory is created automatically on first run.
 
 import sqlite3
 from pathlib import Path
 
-# The database lives in the project root folder
-DB_PATH = Path(__file__).parent.parent / "permi.db"
+
+def get_permi_dir() -> Path:
+    """
+    Return the ~/.permi directory, creating it if it doesn't exist.
+    This is the single source of truth for all Permi user data.
+
+    Windows : C:\\Users\\<username>\\.permi
+    macOS   : /Users/<username>/.permi
+    Linux   : /home/<username>/.permi
+    """
+    permi_dir = Path.home() / ".permi"
+    permi_dir.mkdir(parents=True, exist_ok=True)
+    return permi_dir
+
+
+# The database always lives in ~/.permi/permi.db
+DB_PATH = get_permi_dir() / "permi.db"
 
 
 def get_connection() -> sqlite3.Connection:
     """
     Open and return a connection to the local SQLite database.
-    Sets row_factory so rows behave like dictionaries — you can
-    access columns by name (row['severity']) instead of index (row[2]).
+    Sets row_factory so rows behave like dictionaries.
     """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")  # enforce relationships
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
 def init_db() -> None:
     """
     Create all tables if they don't already exist.
-    Safe to call every time the app starts — won't overwrite existing data.
+    Safe to call every time the app starts.
     """
     conn = get_connection()
 
     with conn:
-
-        # ── projects ──────────────────────────────────────────────────────────
-        # One row per codebase you want to scan repeatedly.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS projects (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,23 +56,18 @@ def init_db() -> None:
             )
         """)
 
-        # ── scan_results ──────────────────────────────────────────────────────
-        # One row per scan run. Links back to the project that was scanned.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS scan_results (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id    INTEGER NOT NULL REFERENCES projects(id),
-                started_at    TEXT    NOT NULL DEFAULT (datetime('now')),
-                finished_at   TEXT,
-                total_files   INTEGER DEFAULT 0,
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id     INTEGER NOT NULL REFERENCES projects(id),
+                started_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+                finished_at    TEXT,
+                total_files    INTEGER DEFAULT 0,
                 total_findings INTEGER DEFAULT 0,
-                status        TEXT    DEFAULT 'running'
+                status         TEXT    DEFAULT 'running'
             )
         """)
 
-        # ── findings ──────────────────────────────────────────────────────────
-        # One row per vulnerability found in a scan.
-        # ai_verdict and ai_explanation are NULL until Phase 1 fills them in.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS findings (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,9 +86,6 @@ def init_db() -> None:
             )
         """)
 
-        # ── feedback ──────────────────────────────────────────────────────────
-        # Stores manual corrections from the user.
-        # 'confirmed' = real vulnerability, 'false_positive' = not a real issue.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS feedback (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,4 +97,3 @@ def init_db() -> None:
         """)
 
     conn.close()
-    print(f"Database ready: {DB_PATH}")
