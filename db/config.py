@@ -1,4 +1,4 @@
-# config.py
+# db/config.py
 # Central configuration management for Permi.
 #
 # API key priority order (highest to lowest):
@@ -20,7 +20,7 @@ def get_api_key() -> str | None:
     Return the OpenRouter API key using the priority chain.
     Returns None if no key is found anywhere.
     """
-    # 1. Environment variable — CI/CD, Docker, etc.
+    # 1. Environment variable — CI/CD, Docker, shell export
     key = os.environ.get("OPENROUTER_API_KEY")
     if key and key.strip():
         return key.strip()
@@ -35,19 +35,16 @@ def get_api_key() -> str | None:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # 3. .env file in current working directory — for local dev
+    # 3. .env file in current working directory — use python-dotenv for safe parsing
     env_file = Path.cwd() / ".env"
     if env_file.exists():
         try:
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line.startswith("OPENROUTER_API_KEY"):
-                    parts = line.split("=", 1)
-                    if len(parts) == 2:
-                        key = parts[1].strip().strip('"').strip("'")
-                        if key:
-                            return key
-        except OSError:
+            from dotenv import dotenv_values
+            env_vals = dotenv_values(env_file)
+            key = env_vals.get("OPENROUTER_API_KEY", "")
+            if key and key.strip():
+                return key.strip()
+        except Exception:
             pass
 
     return None
@@ -59,7 +56,6 @@ def save_api_key(api_key: str) -> None:
     Called by `permi setup --api-key ...`
     """
     data = {}
-
     if CONFIG_FILE.exists():
         try:
             data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
@@ -71,11 +67,8 @@ def save_api_key(api_key: str) -> None:
 
 
 def get_config_path() -> Path:
-    """Return the path to the config file — used by `permi setup` to show the user."""
     return CONFIG_FILE
 
 
 def get_db_path() -> Path:
-    """Return the path to the database — used by `permi info`."""
-    from db.database import DB_PATH
     return DB_PATH

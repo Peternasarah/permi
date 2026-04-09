@@ -21,7 +21,6 @@ def scan_file(file_path: Path) -> list[dict]:
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
-        # If the file can't be read for any reason, skip it silently
         return findings
 
     lines = content.splitlines()
@@ -30,15 +29,15 @@ def scan_file(file_path: Path) -> list[dict]:
         for rule in RULES:
             if rule["pattern"].search(line):
                 findings.append({
-                    "rule_id":     rule["id"],
-                    "rule_name":   rule["name"],
-                    "severity":    rule["severity"],
-                    "description": rule["description"],
-                    "file":        str(file_path),
-                    "line_number": line_number,
-                    "line_content": line.strip(),
-                    "ai_verdict":  None,   # filled in Phase 1
-                    "ai_explanation": None, # filled in Phase 1
+                    "rule_id":        rule["id"],
+                    "rule_name":      rule["name"],
+                    "severity":       rule["severity"],
+                    "description":    rule["description"],
+                    "file":           str(file_path),
+                    "line_number":    line_number,
+                    "line_content":   line.strip(),
+                    "ai_verdict":     None,
+                    "ai_explanation": None,
                 })
 
     return findings
@@ -48,14 +47,22 @@ def scan_directory(directory: Path) -> list[dict]:
     """
     Recursively walk a directory, scan every eligible file,
     and return all findings combined.
+
+    SKIP_DIRS check is case-insensitive so it works correctly
+    on both Windows (case-insensitive FS) and Linux.
     """
     all_findings = []
-    directory = Path(directory).resolve()
+    directory    = Path(directory).resolve()
+
+    # Lowercase skip set for case-insensitive comparison
+    skip_lower = {s.lower() for s in SKIP_DIRS}
 
     for file_path in directory.rglob("*"):
 
         # Skip any path that passes through a blocked directory
-        if any(skip in file_path.parts for skip in SKIP_DIRS):
+        # Uses lower() for Windows compatibility
+        path_parts_lower = [p.lower() for p in file_path.parts]
+        if any(skip in path_parts_lower for skip in skip_lower):
             continue
 
         # Skip directories themselves — only process files

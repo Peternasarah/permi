@@ -284,8 +284,27 @@ SCANNABLE_EXTENSIONS = {
 # These folders are never scanned — they contain dependencies or build artifacts.
 
 SKIP_DIRS = {
-    "node_modules", "venv", ".venv", "env", "__pycache__",
-    ".git", "dist", "build", ".next", "target", ".dart_tool",
-    "ios", "android", ".gradle", "Pods", ".pub-cache",
-    "coverage", ".nyc_output", "out", ".output",
+    # Dependency folders — never contain your code
+    "node_modules",
+    ".pub-cache",
+    "Pods",
+
+    # Virtual environments
+    "venv", ".venv", "env", ".env",
+
+    # Version control
+    ".git", ".svn",
+
+    # Python cache
+    "__pycache__",
+
+    # Framework build outputs — contain generated code, not source
+    ".next", ".nuxt", ".output", ".dart_tool",
+    ".gradle", ".idea", ".vscode",
+
+    # Native mobile build folders
+    "ios", "android",
+
+    # Test coverage reports
+    ".nyc_output", "coverage",
 }
