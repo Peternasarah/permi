@@ -2,6 +2,7 @@
 # Full scan pipeline — engine + AI filter combined.
 # Supports local directories and GitHub URLs.
 
+from __future__ import annotations
 import tempfile
 import subprocess
 from pathlib import Path

@@ -3,6 +3,7 @@
 # and tests every line against every rule in RULES.
 # Returns a list of finding dictionaries.
 
+from __future__ import annotations
 from pathlib import Path
 from .rules import RULES, SCANNABLE_EXTENSIONS, SKIP_DIRS
 

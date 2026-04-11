@@ -7,6 +7,7 @@
 #   3. .env file in current directory            — for developers running from source
 #   4. Nothing found                             — offline mode with clear message
 
+from __future__ import annotations
 import os
 import json
 from pathlib import Path

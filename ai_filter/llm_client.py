@@ -7,6 +7,7 @@
 # API key is loaded via config.py priority chain.
 # If no key found anywhere, defaults to REAL (safe fallback).
 
+from __future__ import annotations
 import json
 import requests
 from db.config import get_api_key
