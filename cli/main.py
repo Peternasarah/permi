@@ -15,6 +15,7 @@ from colorama import Fore, Style, init
 init(autoreset=True)
 
 from cli.formatter import print_results_human, print_summary
+from cli.feedback import collect as collect_feedback
 from scanner.scan import scan as scan_path
 
 
@@ -247,6 +248,11 @@ def scan(url, path, output, severity, offline, project, max_pages):
             if any(f.get("severity") == "high" for f in findings if isinstance(f, dict)):
                 sys.exit(1)
 
+            try:
+                collect_feedback(scan_target=url, findings_count=len(findings))
+            except Exception:
+                pass
+
         except ImportError as e:
             click.echo(f"\n{Fore.RED}[Error] Missing dependencies for web scanning.\nRun: pip install httpx beautifulsoup4\nDetail: {e}{Style.RESET_ALL}\n")
             sys.exit(1)
@@ -292,6 +298,11 @@ def scan(url, path, output, severity, offline, project, max_pages):
 
             if any(f.get("severity") == "high" for f in findings if isinstance(f, dict)):
                 sys.exit(1)
+
+            try:
+                collect_feedback(scan_target=url, findings_count=len(findings))
+            except Exception:
+                pass
 
         except FileNotFoundError as e:
             click.echo(f"\n{Fore.RED}[Error] {e}{Style.RESET_ALL}\n")
@@ -382,6 +393,22 @@ def info():
     """)
 
 
+@cli.command()
+def feedback():
+    """
+    Share feedback about Permi — helps us build what you actually need.
+
+    \b
+    EXAMPLE
+      permi feedback
+
+    Takes less than 60 seconds. Completely optional.
+    """
+    print_banner()
+    collect_feedback()
+
+
+cli.add_command(feedback, name="feedback")
 cli.add_command(scan,  name="scan")
 cli.add_command(setup, name="setup")
 cli.add_command(info,  name="info")
