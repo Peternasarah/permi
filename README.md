@@ -94,6 +94,21 @@ permi scan --path ./myapp --offline
 permi scan --url https://yoursite.com --max-pages 50
 ```
 
+**Save your API key once (enables AI filtering):**
+```bash
+permi setup --api-key sk-or-your-key-here
+```
+
+**Check your configuration:**
+```bash
+permi info
+```
+
+**Submit feedback:**
+```bash
+permi feedback
+```
+
 ---
 
 ## Setup — AI false positive filter

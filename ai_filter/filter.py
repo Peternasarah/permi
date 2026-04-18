@@ -1,7 +1,11 @@
 # ai_filter/filter.py
 # Takes a list of raw findings, runs each through the LLM,
 # saves the verdict back to the database, and returns only
-# the findings the LLM marked as REAL.
+# the findings the LLM marked as REAL or AI_UNAVAILABLE.
+# FP findings are dropped. AI_UNAVAILABLE findings are kept
+# and clearly labelled for manual review.
+
+from __future__ import annotations
 
 from ai_filter.llm_client import analyse
 from db.database import get_connection
@@ -27,7 +31,8 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
         offline:  If True, skip all API calls and return everything as REAL.
 
     Returns:
-        Only the findings the LLM (or offline fallback) marked as REAL.
+        Findings marked REAL or AI_UNAVAILABLE.
+        FP findings are dropped entirely.
     """
     if not findings:
         return []
@@ -38,34 +43,38 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
 
     print(f"[Permi] Running AI filter on {len(findings)} finding(s)...\n")
 
-    conn        = get_connection()
-    real        = []
-    fp_count    = 0
+    conn         = get_connection()
+    keep         = []
+    fp_count     = 0
+    unavail      = 0
 
     for i, finding in enumerate(findings, start=1):
         print(f"  [{i}/{len(findings)}] {finding['rule_id']} "
               f"line {finding['line_number']} — ", end="", flush=True)
 
-        # Send to LLM
-        result = analyse(finding)
+        result  = analyse(finding)
+        verdict = result["ai_verdict"]
+        explan  = result["ai_explanation"]
 
-        verdict     = result["ai_verdict"]
-        explanation = result["ai_explanation"]
-
-        print(f"{verdict}  {explanation}")
+        print(f"{verdict}  {explan}")
 
         # Save verdict back to DB
         if "id" in finding:
-            _update_finding_verdict(conn, finding["id"], verdict, explanation)
+            _update_finding_verdict(conn, finding["id"], verdict, explan)
 
-        if verdict == "REAL":
-            real.append(result)
-        else:
+        if verdict == "FP":
             fp_count += 1
+        else:
+            # REAL and AI_UNAVAILABLE both kept
+            if verdict == "AI_UNAVAILABLE":
+                unavail += 1
+            keep.append(result)
 
     conn.close()
 
-    print(f"\n[Permi] Filter complete — "
-          f"{len(real)} real  |  {fp_count} false positive(s) removed\n")
+    msg = f"\n[Permi] Filter complete — {len(keep)} real  |  {fp_count} false positive(s) removed"
+    if unavail:
+        msg += f"  |  {unavail} need manual review (AI unavailable)"
+    print(msg + "\n")
 
-    return real
+    return keep

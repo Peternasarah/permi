@@ -30,8 +30,8 @@ authors:
 
 # ── Version and dates ─────────────────────────────────────────────────────────
 
-version: "0.1.1"
-date-released: "2026-04-03"
+version: "0.2.4"
+date-released: "2026-04-18"
 
 # ── Repository and distribution ───────────────────────────────────────────────
 
@@ -74,14 +74,14 @@ type: software
 # or a published project, please cite it using the format below.
 #
 # APA:
-#   Dashe, N. P. (2026). Permi (Version 0.1.1) [Software].
+#   Dashe, N. P. (2026). Permi (Version 0.2.4) [Software].
 #   University of Jos, Nigeria. https://github.com/peternasarah/permi
 #
 # BibTeX:
 #   @software{dashe2026permi,
 #     author    = {Dashe, Nasarah Peter},
 #     title     = {Permi},
-#     version   = {0.1.1},
+#     version   = {0.2.4},
 #     year      = {2026},
 #     publisher = {GitHub},
 #     url       = {https://github.com/peternasarah/permi},

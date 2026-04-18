@@ -6,6 +6,9 @@
 #   permi scan  --path ./folder              → static source scanner
 #   permi setup --api-key sk-or-...          → save API key to ~/.permi/config.json
 #   permi info                               → show config paths and status
+#   permi feedback                           → submit feedback
+
+from __future__ import annotations
 
 import json
 import sys
@@ -14,7 +17,7 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-from cli.formatter import print_results_human, print_summary
+from cli.formatter import print_results_human, print_summary, print_ai_summary
 from cli.feedback import collect as collect_feedback
 from scanner.scan import scan as scan_path
 
@@ -54,6 +57,12 @@ def print_web_finding(finding: dict, index: int):
     colors = {"high": Fore.RED, "medium": Fore.YELLOW, "low": Fore.CYAN}
     color  = colors.get(sev, Fore.WHITE)
 
+    verdict_colors = {
+        "REAL":          Fore.RED,
+        "FP":            Fore.GREEN,
+        "AI_UNAVAILABLE": Fore.YELLOW,
+    }
+
     print(f"{Fore.WHITE}{'─' * 72}{Style.RESET_ALL}")
     print(
         f"  {Fore.WHITE}{Style.BRIGHT}[{index}]{Style.RESET_ALL} "
@@ -69,18 +78,25 @@ def print_web_finding(finding: dict, index: int):
         print(f"  {Fore.WHITE}Payload  :{Style.RESET_ALL} {Fore.YELLOW}{finding.get('payload', '—')}{Style.RESET_ALL}")
     print(f"  {Fore.WHITE}Evidence :{Style.RESET_ALL} {finding.get('evidence', '—')}")
     print(f"  {Fore.WHITE}Why      :{Style.RESET_ALL} {finding.get('description', '—')}")
+
     verdict = finding.get("ai_verdict")
     if verdict:
-        vc = Fore.RED if verdict == "REAL" else Fore.GREEN
+        vc    = verdict_colors.get(verdict, Fore.WHITE)
+        label = "REVIEW" if verdict == "AI_UNAVAILABLE" else verdict
         print(
             f"  {Fore.WHITE}AI       :{Style.RESET_ALL} "
-            f"{vc}{Style.BRIGHT}{verdict}{Style.RESET_ALL}  "
+            f"{vc}{Style.BRIGHT}{label}{Style.RESET_ALL}  "
             f"{finding.get('ai_explanation', '')}"
         )
     print()
 
 
 def print_web_results(findings: list, raw_count: int):
+    """Print web scan findings with AI summary upfront."""
+    # AI summary at the top — shows value immediately
+    if raw_count > 0:
+        print_ai_summary(findings, raw_count)
+
     if not findings:
         print(f"\n{Fore.GREEN}{Style.BRIGHT}  ✅  No vulnerabilities found.\n{Style.RESET_ALL}")
         return
@@ -192,7 +208,8 @@ def scan(url, path, output, severity, offline, project, max_pages):
     if output == "human":
         print_banner()
 
-    order = {"high": 1, "medium": 2, "low": 3}
+    order       = {"high": 1, "medium": 2, "low": 3}
+    has_high    = False  # track this so feedback runs before exit
 
     # ════════════════════════════════════════════════════════════════════
     # MODE A — URL scan
@@ -223,7 +240,6 @@ def scan(url, path, output, severity, offline, project, max_pages):
                     print(f"{Fore.YELLOW}[Permi] Offline mode — AI filter skipped.{Style.RESET_ALL}\n")
                 findings = raw_findings
             else:
-                # Check API key and warn if missing
                 if not get_api_key():
                     print(
                         f"{Fore.YELLOW}[Permi] No API key found — running in offline mode.\n"
@@ -245,13 +261,17 @@ def scan(url, path, output, severity, offline, project, max_pages):
             else:
                 print_web_results(findings, raw_count)
 
-            if any(f.get("severity") == "high" for f in findings if isinstance(f, dict)):
-                sys.exit(1)
+            # Track high severity BEFORE exiting so feedback still runs
+            has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
 
+            # ── Feedback — runs after EVERY scan, including high-severity ones
             try:
                 collect_feedback(scan_target=url, findings_count=len(findings))
             except Exception:
                 pass
+
+            if has_high:
+                sys.exit(1)
 
         except ImportError as e:
             click.echo(f"\n{Fore.RED}[Error] Missing dependencies for web scanning.\nRun: pip install httpx beautifulsoup4\nDetail: {e}{Style.RESET_ALL}\n")
@@ -267,7 +287,6 @@ def scan(url, path, output, severity, offline, project, max_pages):
         try:
             from db.config import get_api_key
 
-            # Warn about API key before scan starts
             if not offline and not get_api_key():
                 print(
                     f"{Fore.YELLOW}[Permi] No API key found — AI filter will be skipped.\n"
@@ -293,16 +312,22 @@ def scan(url, path, output, severity, offline, project, max_pages):
                 clean = [{k: v for k, v in f.items() if v is not None} for f in findings if isinstance(f, dict)]
                 click.echo(json.dumps(clean, indent=2))
             else:
-                print_results_human(findings)
+                # Pass raw_count so the AI summary can show noise reduction
+                print_results_human(findings, raw_count=raw_count)
                 print_summary(findings, raw_count=raw_count)
 
-            if any(f.get("severity") == "high" for f in findings if isinstance(f, dict)):
-                sys.exit(1)
+            # Track high severity BEFORE exiting so feedback still runs
+            has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
 
+            # ── Feedback — runs after EVERY scan, including high-severity ones
+            # BUG FIX: was using `url` (None in path mode) — now correctly uses `path`
             try:
-                collect_feedback(scan_target=url, findings_count=len(findings))
+                collect_feedback(scan_target=path, findings_count=len(findings))
             except Exception:
                 pass
+
+            if has_high:
+                sys.exit(1)
 
         except FileNotFoundError as e:
             click.echo(f"\n{Fore.RED}[Error] {e}{Style.RESET_ALL}\n")
@@ -352,9 +377,6 @@ def setup(api_key):
 def info():
     """
     Show Permi's configuration status and file locations.
-
-    Useful for checking if your API key is configured correctly
-    and where Permi is storing its data.
     """
     from db.config import get_api_key, get_config_path, get_db_path
     import importlib.metadata
@@ -365,7 +387,10 @@ def info():
         version = "dev"
 
     api_key    = get_api_key()
-    key_status = f"{Fore.GREEN}✅  Configured{Style.RESET_ALL}" if api_key else f"{Fore.RED}❌  Not set — run: permi setup --api-key YOUR_KEY{Style.RESET_ALL}"
+    key_status = (
+        f"{Fore.GREEN}✅  Configured{Style.RESET_ALL}" if api_key
+        else f"{Fore.RED}❌  Not set — run: permi setup --api-key YOUR_KEY{Style.RESET_ALL}"
+    )
     key_source = ""
 
     if api_key:
@@ -393,6 +418,7 @@ def info():
     """)
 
 
+# ── FEEDBACK COMMAND ──────────────────────────────────────────────────────────
 @cli.command()
 def feedback():
     """
@@ -409,6 +435,6 @@ def feedback():
 
 
 cli.add_command(feedback, name="feedback")
-cli.add_command(scan,  name="scan")
-cli.add_command(setup, name="setup")
-cli.add_command(info,  name="info")
+cli.add_command(scan,     name="scan")
+cli.add_command(setup,    name="setup")
+cli.add_command(info,     name="info")

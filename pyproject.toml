@@ -4,12 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.2.3"
+version = "0.2.4"
 description = "AI-powered vulnerability scanner for Nigerian developers and global SMBs"
 readme = "README.md"
 requires-python = ">=3.9"
-license = "LicenseRef-Permi-Community-License"
-license-files = ["LICENSE"]
+license = { file = "LICENSE" }
 authors = [
     { name = "Nasarah Peter Dashe", email = "dashenasarahpeter@gmail.com" }
 ]

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.request
 import urllib.parse
 from datetime import datetime
@@ -46,7 +47,8 @@ def _save_locally(data: dict) -> None:
 def _submit_to_google(rating: str, miss: str, feature: str, email: str) -> bool:
     """
     Submit feedback to Google Forms silently.
-    Returns True if submitted successfully, False otherwise.
+    Retries up to 10 times with exponential backoff.
+    Returns True if any attempt succeeded, False if all failed.
     """
     params = {ENTRY_RATING: rating}
     if miss.strip():
@@ -58,21 +60,30 @@ def _submit_to_google(rating: str, miss: str, feature: str, email: str) -> bool:
 
     data = urllib.parse.urlencode(params).encode("utf-8")
 
-    try:
-        req = urllib.request.Request(
-            FORM_URL,
-            data=data,
-            method="POST",
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent":   "Permi-CLI-Feedback/1.0",
-            }
-        )
-        # Google Forms returns 200 or redirects — both mean success
-        urllib.request.urlopen(req, timeout=8)
-        return True
-    except Exception:
-        return False
+    MAX_ATTEMPTS = 10
+
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            req = urllib.request.Request(
+                FORM_URL,
+                data=data,
+                method="POST",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent":   "Permi-CLI-Feedback/1.0",
+                }
+            )
+            urllib.request.urlopen(req, timeout=8)
+            return True  # success — stop retrying
+
+        except Exception:
+            if attempt < MAX_ATTEMPTS - 1:
+                # Exponential backoff: 1s, 2s, 4s, 8s, 16s... capped at 30s
+                wait = min(2 ** attempt, 30)
+                time.sleep(wait)
+            continue
+
+    return False  # all 10 attempts failed
 
 
 def collect(scan_target: str = "", findings_count: int = 0) -> None:
