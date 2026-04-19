@@ -1,83 +1,161 @@
 # ai_filter/llm_client.py
 # The only module in Permi that makes network requests.
-# Sends a finding to OpenRouter and returns a verdict:
-#   REAL  — this is a genuine vulnerability
-#   FP    — this is a false positive, ignore it
 #
-# API key is loaded via db/config.py priority chain.
-# Retry logic handles intermittent SSL EOF errors from OpenRouter.
-# If all retries fail, verdict is marked AI_UNAVAILABLE — never fakes REAL.
 
 from __future__ import annotations
 
 import os
 import json
 import time
+import hashlib
 import requests
 from db.config import get_api_key
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL          = os.environ.get("PERMI_LLM_MODEL", "deepseek/deepseek-chat")
+TIMEOUT        = 30
+MAX_RETRIES    = 3
 
-# Configurable via environment variable — future-proof if model changes
-MODEL   = os.environ.get("PERMI_LLM_MODEL", "deepseek/deepseek-chat")
-TIMEOUT = 30
+# ── Confidence thresholds ─────────────────────────────────────────────────────
+# confidence >= HIGH_THRESHOLD  → REAL   (show to user, fix this)
+# confidence <= LOW_THRESHOLD   → FP     (drop silently)
+# between                       → REVIEW (show with manual review label)
+HIGH_THRESHOLD = 75
+LOW_THRESHOLD  = 35
 
-# How many times to retry on SSL/network errors before giving up
-MAX_RETRIES = 3
+# ── In-memory cache ───────────────────────────────────────────────────────────
+# Keyed by a hash of rule_id + file + line_number + line_content.
+# Cleared when the process exits — never persists between scans.
+# This means identical findings in the same scan session never hit the API twice.
+_cache: dict[str, dict] = {}
+
+
+def _cache_key(finding: dict) -> str:
+    """Generate a stable cache key for a finding."""
+    raw = (
+        str(finding.get("rule_id", ""))
+        + str(finding.get("file", ""))
+        + str(finding.get("line_number", ""))
+        + str(finding.get("line_content", ""))
+    )
+    return hashlib.md5(raw.encode("utf-8")).hexdigest()
 
 
 def _build_prompt(finding: dict) -> str:
-    return f"""You are a senior application security engineer reviewing automated scan results.
+    """
+    Build a structured JSON prompt.
+    Asking for JSON output makes parsing reliable — no fragile text splitting.
+    """
+    return f"""You are a senior application security engineer reviewing automated SAST scan results.
 
-A static analysis tool flagged the following finding. Your job is to decide if this is a REAL vulnerability or a FALSE POSITIVE (FP).
+Analyze this potential vulnerability and decide if it is a true positive or false positive.
 
 --- FINDING ---
-Rule     : {finding['rule_id']} — {finding['rule_name']}
-Severity : {finding['severity']}
-File     : {finding['file']}
-Line     : {finding['line_number']}
-Code     : {finding['line_content']}
-Detail   : {finding['description']}
+Rule ID    : {finding.get('rule_id', 'N/A')}
+Rule Name  : {finding.get('rule_name', 'N/A')}
+Severity   : {finding.get('severity', 'N/A')}
+File       : {finding.get('file', 'N/A')}
+Line       : {finding.get('line_number', 'N/A')}
+Code       : {finding.get('line_content', 'N/A')}
+Description: {finding.get('description', 'N/A')}
 ---------------
 
-Instructions:
-- Answer with exactly one word on the first line: REAL or FP
-- On the second line, write one short sentence (max 20 words) explaining your verdict
-- Do not write anything else
+Consider:
+- Is this code actually reachable and exploitable?
+- Is the flagged pattern in executable code or in a comment, string, or template?
+- Does the context suggest user-controlled input reaches the vulnerable point?
 
-Your verdict:"""
+Respond with a JSON object ONLY. No explanation outside the JSON. No markdown fences.
+
+{{
+  "is_true_positive": true or false,
+  "confidence": integer between 0 and 100,
+  "reason": "one sentence, max 20 words"
+}}"""
+
+
+def _parse_response(raw: str) -> tuple[str, int, str]:
+    """
+    Parse the LLM JSON response into (verdict, confidence, reason).
+
+    Verdict mapping:
+      confidence >= HIGH_THRESHOLD AND is_true_positive → REAL
+      confidence <= LOW_THRESHOLD  OR NOT is_true_positive → FP
+      everything else → REVIEW
+
+    Returns (verdict, confidence, reason) or raises ValueError on bad JSON.
+    """
+    # Strip markdown fences if the model added them despite instructions
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        lines   = cleaned.splitlines()
+        cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    data       = json.loads(cleaned)
+    is_tp      = bool(data.get("is_true_positive", True))
+    confidence = int(data.get("confidence", 50))
+    reason     = str(data.get("reason", "No reason provided."))
+
+    # Clamp confidence to 0-100
+    confidence = max(0, min(100, confidence))
+
+    # Determine verdict based on confidence thresholds
+    if not is_tp or confidence <= LOW_THRESHOLD:
+        verdict = "FP"
+    elif confidence >= HIGH_THRESHOLD:
+        verdict = "REAL"
+    else:
+        verdict = "REVIEW"
+
+    return verdict, confidence, reason
 
 
 def _is_ssl_eof_error(error: Exception) -> bool:
-    """Return True if the error is the common OpenRouter SSL EOF issue."""
+    """Return True if this is the common OpenRouter SSL EOF issue."""
     msg = str(error)
     return (
         "UNEXPECTED_EOF_WHILE_READING" in msg
         or "EOF occurred in violation of protocol" in msg
         or "SSLEOFError" in msg
         or "Connection reset by peer" in msg
+        or "RemoteDisconnected" in msg
     )
 
 
 def analyse(finding: dict) -> dict:
     """
-    Send one finding to the LLM and return the finding dict
-    updated with ai_verdict and ai_explanation.
+    Send one finding to the LLM and return the finding dict updated with:
+      ai_verdict      — REAL / REVIEW / FP / AI_UNAVAILABLE
+      ai_confidence   — 0-100 (None if API unavailable)
+      ai_explanation  — one-sentence reason
 
-    Retry logic:
-      - SSL EOF errors → retry up to MAX_RETRIES times with backoff
-      - Other network errors → fail immediately, mark as AI_UNAVAILABLE
-      - AI_UNAVAILABLE findings are kept in output but clearly labelled
-        (never silently promoted to REAL)
+    Cache:
+      If an identical finding was already analysed this session,
+      the cached result is returned immediately without an API call.
+
+    Retry:
+      SSL/network errors → retry up to MAX_RETRIES times with backoff.
+      Other errors       → fail immediately.
+      All retries fail   → AI_UNAVAILABLE (never silently becomes REAL).
     """
     api_key = get_api_key()
 
     if not api_key:
         finding["ai_verdict"]     = "REAL"
+        finding["ai_confidence"]  = None
         finding["ai_explanation"] = "No API key — AI filter skipped."
         return finding
 
-    prompt = _build_prompt(finding)
+    # ── Cache check ───────────────────────────────────────────────────────────
+    key = _cache_key(finding)
+    if key in _cache:
+        cached = _cache[key]
+        finding["ai_verdict"]     = cached["verdict"]
+        finding["ai_confidence"]  = cached["confidence"]
+        finding["ai_explanation"] = cached["reason"] + " [cached]"
+        return finding
+
+    prompt     = _build_prompt(finding)
     last_error = ""
 
     for attempt in range(MAX_RETRIES):
@@ -94,56 +172,49 @@ def analyse(finding: dict) -> dict:
                     "model":       MODEL,
                     "messages":    [{"role": "user", "content": prompt}],
                     "temperature": 0,
-                    "max_tokens":  60,
+                    "max_tokens":  120,  # slightly more room for JSON
                 },
                 timeout=TIMEOUT,
             )
             response.raise_for_status()
 
-            # ── Parse response ────────────────────────────────────────────────
-            content     = response.json()["choices"][0]["message"]["content"].strip()
-            lines       = content.splitlines()
-            verdict     = lines[0].strip().upper()
-            explanation = lines[1].strip() if len(lines) > 1 else "No explanation provided."
+            raw_content = response.json()["choices"][0]["message"]["content"]
+            verdict, confidence, reason = _parse_response(raw_content)
 
-            if verdict not in ("REAL", "FP"):
-                invalid_verdict = verdict
-                verdict         = "REAL"
-                explanation     = f"Unexpected model verdict '{invalid_verdict}' — defaulting to REAL."
+            # Store in cache
+            _cache[key] = {
+                "verdict":    verdict,
+                "confidence": confidence,
+                "reason":     reason,
+            }
 
             finding["ai_verdict"]     = verdict
-            finding["ai_explanation"] = explanation
+            finding["ai_confidence"]  = confidence
+            finding["ai_explanation"] = reason
             return finding
 
         except requests.exceptions.Timeout:
-            # Timeout — retry
             last_error = "request timed out"
-            wait = (2 ** attempt) * 1.5
             if attempt < MAX_RETRIES - 1:
-                time.sleep(wait)
+                time.sleep((2 ** attempt) * 1.5)
             continue
 
         except requests.exceptions.RequestException as exc:
             if _is_ssl_eof_error(exc):
-                # SSL EOF — common OpenRouter glitch, retry with backoff
                 last_error = "SSL connection error"
-                wait = (2 ** attempt) * 1.5
                 if attempt < MAX_RETRIES - 1:
-                    time.sleep(wait)
+                    time.sleep((2 ** attempt) * 1.5)
                 continue
             else:
-                # Other network error — don't retry
                 last_error = "network error"
                 break
 
-        except (KeyError, IndexError, json.JSONDecodeError):
-            # Bad response format — don't retry
-            last_error = "unexpected response format"
+        except (ValueError, KeyError, IndexError, json.JSONDecodeError) as exc:
+            last_error = f"response parse error ({exc})"
             break
 
-    # ── All retries exhausted or unrecoverable error ──────────────────────────
-    # Mark as AI_UNAVAILABLE — do NOT silently promote to REAL.
-    # The finding will still appear in output but clearly labelled.
+    # ── All retries exhausted ─────────────────────────────────────────────────
     finding["ai_verdict"]     = "AI_UNAVAILABLE"
+    finding["ai_confidence"]  = None
     finding["ai_explanation"] = f"AI filter unavailable ({last_error}) — review manually."
     return finding

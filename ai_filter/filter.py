@@ -1,9 +1,12 @@
 # ai_filter/filter.py
-# Takes a list of raw findings, runs each through the LLM,
-# saves the verdict back to the database, and returns only
-# the findings the LLM marked as REAL or AI_UNAVAILABLE.
-# FP findings are dropped. AI_UNAVAILABLE findings are kept
-# and clearly labelled for manual review.
+# Takes raw findings, runs each through the LLM analyser,
+# saves verdicts to the database, and returns filtered results.
+#
+# Verdict handling:
+#   REAL          → kept, shown in full
+#   REVIEW        → kept, labelled for manual review (medium confidence)
+#   FP            → dropped silently
+#   AI_UNAVAILABLE → kept, labelled — never silently promoted to REAL
 
 from __future__ import annotations
 
@@ -11,8 +14,14 @@ from ai_filter.llm_client import analyse
 from db.database import get_connection
 
 
-def _update_finding_verdict(conn, finding_id: int, verdict: str, explanation: str) -> None:
-    """Write the AI verdict back to the findings table."""
+def _update_finding_verdict(
+    conn,
+    finding_id: int,
+    verdict: str,
+    explanation: str,
+    confidence: int | None,
+) -> None:
+    """Write AI verdict and confidence back to the findings table."""
     conn.execute("""
         UPDATE findings
         SET ai_verdict     = ?,
@@ -28,10 +37,10 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
 
     Args:
         findings: Raw findings list from the scanner.
-        offline:  If True, skip all API calls and return everything as REAL.
+        offline:  If True, skip all API calls and return everything as-is.
 
     Returns:
-        Findings marked REAL or AI_UNAVAILABLE.
+        Findings with verdict REAL, REVIEW, or AI_UNAVAILABLE.
         FP findings are dropped entirely.
     """
     if not findings:
@@ -43,38 +52,47 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
 
     print(f"[Permi] Running AI filter on {len(findings)} finding(s)...\n")
 
-    conn         = get_connection()
-    keep         = []
-    fp_count     = 0
-    unavail      = 0
+    conn      = get_connection()
+    keep      = []
+    fp_count  = 0
+    review    = 0
+    unavail   = 0
 
     for i, finding in enumerate(findings, start=1):
-        print(f"  [{i}/{len(findings)}] {finding['rule_id']} "
-              f"line {finding['line_number']} — ", end="", flush=True)
+        label = f"{finding['rule_id']} line {finding['line_number']}"
+        print(f"  [{i}/{len(findings)}] {label} — ", end="", flush=True)
 
-        result  = analyse(finding)
-        verdict = result["ai_verdict"]
-        explan  = result["ai_explanation"]
+        result     = analyse(finding)
+        verdict    = result["ai_verdict"]
+        explan     = result["ai_explanation"]
+        confidence = result.get("ai_confidence")
 
-        print(f"{verdict}  {explan}")
+        # Build display string
+        conf_str = f" ({confidence}%)" if confidence is not None else ""
+        print(f"{verdict}{conf_str}  {explan}")
 
         # Save verdict back to DB
         if "id" in finding:
-            _update_finding_verdict(conn, finding["id"], verdict, explan)
+            _update_finding_verdict(conn, finding["id"], verdict, explan, confidence)
 
         if verdict == "FP":
             fp_count += 1
         else:
-            # REAL and AI_UNAVAILABLE both kept
-            if verdict == "AI_UNAVAILABLE":
+            if verdict == "REVIEW":
+                review += 1
+            elif verdict == "AI_UNAVAILABLE":
                 unavail += 1
             keep.append(result)
 
     conn.close()
 
-    msg = f"\n[Permi] Filter complete — {len(keep)} real  |  {fp_count} false positive(s) removed"
+    # ── Filter summary ────────────────────────────────────────────────────────
+    parts = [f"{len(keep)} kept", f"{fp_count} false positive(s) removed"]
+    if review:
+        parts.append(f"{review} need manual review")
     if unavail:
-        msg += f"  |  {unavail} need manual review (AI unavailable)"
-    print(msg + "\n")
+        parts.append(f"{unavail} AI unavailable")
+
+    print(f"\n[Permi] Filter complete — {' | '.join(parts)}\n")
 
     return keep
