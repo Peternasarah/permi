@@ -308,3 +308,148 @@ SKIP_DIRS = {
     # Test coverage reports
     ".nyc_output", "coverage",
 }
+
+
+# ── FIX TEMPLATES ─────────────────────────────────────────────────────────────
+# One actionable fix per rule ID.
+# Shown directly in the terminal output next to each finding.
+# Static and curated — always correct, zero API calls.
+
+FIX_TEMPLATES = {
+
+    # ── SQL Injection ─────────────────────────────────────────────────────────
+    "SQL001": (
+        'Use parameterised queries: '
+        'cursor.execute("SELECT * FROM users WHERE name = ?", (username,))'
+    ),
+    "SQL002": (
+        'Replace f-string with parameterised query: '
+        'cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))'
+    ),
+    "SQL003": (
+        'Replace % formatting with parameterised query: '
+        'cursor.execute("SELECT * FROM users WHERE name = %s", (username,))'
+    ),
+
+    # ── XSS ───────────────────────────────────────────────────────────────────
+    "XSS001": (
+        'Sanitise before assigning: '
+        'element.textContent = userInput  '
+        '(use textContent not innerHTML, or sanitise with DOMPurify)'
+    ),
+    "XSS002": (
+        'Avoid document.write() — use DOM methods: '
+        'document.getElementById("target").textContent = safeValue'
+    ),
+    "XSS003": (
+        'Remove |safe filter unless the value is from a trusted, '
+        'server-controlled source only — never from user input'
+    ),
+
+    # ── Hardcoded Secrets ─────────────────────────────────────────────────────
+    "SEC001": (
+        'Move to environment variable: '
+        'import os; password = os.environ.get("DB_PASSWORD")  '
+        'and add the key to your .env file (never commit .env)'
+    ),
+    "SEC002": (
+        'Remove AWS key from code immediately. '
+        'Use IAM roles or store in environment: '
+        'os.environ.get("AWS_ACCESS_KEY_ID")'
+    ),
+    "SEC003": (
+        'Remove private key from source code immediately. '
+        'Store in a secrets manager or environment variable. '
+        'Rotate the key if it was ever committed to git.'
+    ),
+    "SEC004": (
+        'Move Paystack/Flutterwave key to environment variable: '
+        'import os; secret_key = os.environ.get("PAYSTACK_SECRET_KEY")  '
+        'Rotate the key if it was ever committed.'
+    ),
+    "SEC005": (
+        'Ensure .env is in your .gitignore and never committed. '
+        'Use python-dotenv to load: '
+        'from dotenv import load_dotenv; load_dotenv()'
+    ),
+
+    # ── USSD ──────────────────────────────────────────────────────────────────
+    "USSD001": (
+        'Validate USSD inputs before use: '
+        'if not re.match(r"^[0-9+]+$", phone_number): abort(400)  '
+        'Always whitelist expected formats for sessionId and phoneNumber.'
+    ),
+    "USSD002": (
+        'Replace wildcard serviceCode with explicit allowed values: '
+        'ALLOWED = {"+2348100001234"}; '
+        'if service_code not in ALLOWED: return "END Invalid service"'
+    ),
+
+    # ── Insecure Practices ────────────────────────────────────────────────────
+    "INS001": (
+        'Set debug=False in production. '
+        'Use environment variable: '
+        'app.debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"'
+    ),
+    "INS002": (
+        'Remove verify=False. '
+        'If you need a custom CA: '
+        'requests.get(url, verify="/path/to/ca-bundle.crt")'
+    ),
+    "INS003": (
+        'Replace eval() with a safe alternative. '
+        'For maths: use ast.literal_eval() or the operator module. '
+        'Never pass user input to eval().'
+    ),
+    "INS004": (
+        'Replace exec() — never pass user input to exec(). '
+        'Redesign the logic to avoid dynamic code execution entirely.'
+    ),
+    "INS005": (
+        'Replace pickle with a safe serialisation format: '
+        'import json; data = json.loads(raw)  '
+        'If pickle is required, verify the source with an HMAC signature first.'
+    ),
+    "INS006": (
+        'Remove shell=True and pass arguments as a list: '
+        'subprocess.run(["ls", "-la", path], shell=False)  '
+        'Never build the command string from user input.'
+    ),
+    "INS007": (
+        'Replace os.system() with subprocess.run() and a list: '
+        'subprocess.run(["ping", "-c", "3", host], shell=False)  '
+        'Never pass user-controlled strings to os.system().'
+    ),
+
+    # ── Web scanner rules ─────────────────────────────────────────────────────
+    "WEB_SQL001": (
+        'Use parameterised queries or a prepared statement. '
+        'Never concatenate user input into SQL strings directly.'
+    ),
+    "WEB_SQL002": (
+        'Boolean-based blind SQLi detected. '
+        'Audit all query parameters and use an ORM or parameterised queries.'
+    ),
+    "WEB_SQL003": (
+        'Time-based blind SQLi detected. '
+        'Switch to parameterised queries and add input validation.'
+    ),
+    "WEB_XSS001": (
+        'HTML-encode all reflected parameters before rendering. '
+        'In Flask: use {{ value | e }}. In Django: auto-escaping handles this. '
+        'Add Content-Security-Policy header to limit script execution.'
+    ),
+    "WEB_HDR001": (
+        'Add these headers to every response:\n'
+        '  Strict-Transport-Security: max-age=31536000; includeSubDomains\n'
+        '  Content-Security-Policy: default-src \'self\'\n'
+        '  X-Frame-Options: DENY\n'
+        '  X-Content-Type-Options: nosniff\n'
+        '  Referrer-Policy: strict-origin-when-cross-origin'
+    ),
+    "WEB_HDR002": (
+        'Hide server version in Apache: ServerTokens Prod  '
+        'In Nginx: server_tokens off;  '
+        'Remove X-Powered-By header entirely.'
+    ),
+}

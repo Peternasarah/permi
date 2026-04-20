@@ -14,7 +14,6 @@ SEVERITY_COLOUR = {
     "low":    Fore.CYAN,
 }
 
-# Verdict colours — REVIEW gets yellow (needs attention but not confirmed)
 VERDICT_COLOUR = {
     "REAL":           Fore.RED,
     "REVIEW":         Fore.YELLOW,
@@ -52,23 +51,21 @@ def print_ai_summary(findings: list[dict], raw_count: int) -> None:
     if raw_count == 0:
         return
 
-    real_count  = sum(1 for f in findings if f.get("ai_verdict") == "REAL")
-    review_count= sum(1 for f in findings if f.get("ai_verdict") in ("REVIEW", "AI_UNAVAILABLE"))
-    fp_count    = raw_count - len(findings)
-    noise_pct   = int((fp_count / raw_count) * 100) if raw_count > 0 else 0
+    real_count   = sum(1 for f in findings if f.get("ai_verdict") == "REAL")
+    review_count = sum(1 for f in findings if f.get("ai_verdict") in ("REVIEW", "AI_UNAVAILABLE"))
+    fp_count     = raw_count - len(findings)
+    noise_pct    = int((fp_count / raw_count) * 100) if raw_count > 0 else 0
 
     high   = sum(1 for f in findings if f.get("severity") == "high")
     medium = sum(1 for f in findings if f.get("severity") == "medium")
     low    = sum(1 for f in findings if f.get("severity") == "low")
 
-    # Average confidence of REAL findings
     conf_scores = [
         f["ai_confidence"] for f in findings
         if f.get("ai_verdict") == "REAL" and f.get("ai_confidence") is not None
     ]
     avg_conf = int(sum(conf_scores) / len(conf_scores)) if conf_scores else None
 
-    # Top issues grouped by rule name (REAL only)
     rule_counts = Counter(
         f.get("rule_name", "Unknown") for f in findings
         if f.get("ai_verdict") == "REAL"
@@ -113,6 +110,15 @@ def print_ai_summary(findings: list[dict], raw_count: int) -> None:
     print(f"\n  {Fore.WHITE}Full details below ↓{Style.RESET_ALL}\n")
 
 
+def _get_fix(rule_id: str) -> str | None:
+    """Look up the fix template for a rule ID. Returns None if not found."""
+    try:
+        from scanner.rules import FIX_TEMPLATES
+        return FIX_TEMPLATES.get(rule_id)
+    except ImportError:
+        return None
+
+
 def print_finding(finding: dict, index: int) -> None:
     """Print a single finding as a formatted block."""
     sev    = finding.get("severity", "low")
@@ -137,13 +143,26 @@ def print_finding(finding: dict, index: int) -> None:
     )
     print(Fore.WHITE + "  Why   : " + Style.RESET_ALL + finding.get("description", ""))
 
+    # ── Remediation fix ───────────────────────────────────────────────────────
+    fix = _get_fix(finding.get("rule_id", ""))
+    if fix:
+        # Handle multi-line fixes (WEB_HDR001 has newlines)
+        fix_lines = fix.split("\n")
+        print(
+            Fore.WHITE + "  Fix   : " + Style.RESET_ALL +
+            Fore.GREEN + fix_lines[0] + Style.RESET_ALL
+        )
+        for extra_line in fix_lines[1:]:
+            print(Fore.GREEN + "          " + extra_line + Style.RESET_ALL)
+
+    # ── AI verdict ────────────────────────────────────────────────────────────
     verdict    = finding.get("ai_verdict")
     confidence = finding.get("ai_confidence")
 
     if verdict:
-        v_colour   = VERDICT_COLOUR.get(verdict, Fore.WHITE)
-        v_label    = VERDICT_LABEL.get(verdict, verdict)
-        conf_str   = f" [{confidence}% confidence]" if confidence is not None else ""
+        v_colour = VERDICT_COLOUR.get(verdict, Fore.WHITE)
+        v_label  = VERDICT_LABEL.get(verdict, verdict)
+        conf_str = f" [{confidence}% confidence]" if confidence is not None else ""
         print(
             Fore.WHITE + "  AI    : " +
             v_colour + Style.BRIGHT + v_label + Style.RESET_ALL +
@@ -154,10 +173,7 @@ def print_finding(finding: dict, index: int) -> None:
 
 
 def print_results_human(findings: list[dict], raw_count: int = 0) -> None:
-    """
-    Print AI summary first, then all findings in detail.
-    raw_count is needed for the summary.
-    """
+    """Print AI summary first, then all findings in detail."""
     if raw_count > 0:
         print_ai_summary(findings, raw_count)
 
