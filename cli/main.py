@@ -152,7 +152,14 @@ def cli():
               help="Project name to store in the database.")
 @click.option("--max-pages", default=30, show_default=True,
               help="Maximum pages to crawl (URL scan only).")
-def scan(url, path, output, severity, offline, project, max_pages):
+@click.option("--include-subdomains", is_flag=True, default=False,
+              help=(
+                  "Also scan subdomains of the target. "
+                  "e.g. scanning soso.edu.ng will also crawl portal.soso.edu.ng. "
+                  "External domains are never followed. (URL scan only)"
+                  ),
+              )
+def scan(url, path, output, severity, offline, project, max_pages, include_subdomains):
     """
     Scan a live URL or codebase for vulnerabilities.
 
@@ -177,6 +184,9 @@ def scan(url, path, output, severity, offline, project, max_pages):
       Skip AI filter:
         permi scan --path ./myapp --offline
 
+      Scan including subdomains:
+      permi scan --url https://soso.edu.ng --include-subdomains
+        
     \b
     SCAN MODES
 
@@ -227,7 +237,11 @@ def scan(url, path, output, severity, offline, project, max_pages):
             print(f"{Fore.CYAN}[Permi] Target   : {url}{Style.RESET_ALL}")
             print(f"{Fore.CYAN}[Permi] Crawl    : up to {max_pages} pages{Style.RESET_ALL}\n")
 
-            raw_findings, info = scan_url(url, max_pages=max_pages)
+            raw_findings, info = scan_url(
+                url,
+                max_pages=max_pages,
+                include_subdomains=include_subdomains,
+                )
             raw_count = len(raw_findings)
 
             print(f"\n{Fore.WHITE}[Permi] Engine found {raw_count} raw finding(s){Style.RESET_ALL}\n")
