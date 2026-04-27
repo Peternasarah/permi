@@ -20,6 +20,7 @@ init(autoreset=True)
 from cli.formatter import print_results_human, print_summary, print_ai_summary
 from cli.feedback import collect as collect_feedback
 from scanner.scan import scan as scan_path
+from cli.exporter import export as export_results
 
 
 # ── BANNER ────────────────────────────────────────────────────────────────────
@@ -152,6 +153,18 @@ def cli():
               help="Project name to store in the database.")
 @click.option("--max-pages", default=30, show_default=True,
               help="Maximum pages to crawl (URL scan only).")
+@click.option(
+    "--export", "-e",
+    "export_file",
+    default=None,
+    metavar="FILE",
+    help=(
+        "Export full results to a file. "
+        "Format is inferred from extension: "
+        ".txt (plain text), .json (structured), .md (markdown). "
+        "Example: --export results.txt"
+    ),
+)
 @click.option("--include-subdomains", is_flag=True, default=False,
               help=(
                   "Also scan subdomains of the target. "
@@ -159,7 +172,7 @@ def cli():
                   "External domains are never followed. (URL scan only)"
                   ),
               )
-def scan(url, path, output, severity, offline, project, max_pages, include_subdomains):
+def scan(url, path, output, severity, offline, project, max_pages, include_subdomains, export_file):
     """
     Scan a live URL or codebase for vulnerabilities.
 
@@ -185,7 +198,16 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
         permi scan --path ./myapp --offline
 
       Scan including subdomains:
-      permi scan --url https://soso.edu.ng --include-subdomains
+        permi scan --url https://soso.edu.ng --include-subdomains
+
+      Export to text file (no truncation):
+        permi scan --path ./myapp --export results.txt
+
+      Export to markdown (great for GitHub issues):
+        permi scan --url https://yoursite.com --export report.md
+
+      Export to JSON (for CI/CD pipelines):
+        permi scan --path ./myapp --export findings.json
         
     \b
     SCAN MODES
@@ -278,6 +300,19 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
             # Track high severity BEFORE exiting so feedback still runs
             has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
 
+            if export_file and output != "json":
+                try:
+                    saved_path = export_results(
+                        filepath=export_file,
+                        findings=findings,
+                        raw_count=raw_count,
+                        scan_target=url,
+                        info=info,
+                    )
+                    print(f"\n[Permi] Results exported to: {saved_path}\n")
+                except Exception as e:
+                    print(f"\n[Permi] Export failed: {e}\n")
+
             # ── Feedback — runs after EVERY scan, including high-severity ones
             try:
                 collect_feedback(scan_target=url, findings_count=len(findings))
@@ -332,6 +367,19 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
 
             # Track high severity BEFORE exiting so feedback still runs
             has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
+
+            if export_file and output != "json":
+                try:
+                    saved_path = export_results(
+                        filepath=export_file,
+                        findings=findings,
+                        raw_count=raw_count,
+                        scan_target=path,
+                        info=None,
+                    )
+                    print(f"\n[Permi] Results exported to: {saved_path}\n")
+                except Exception as e:
+                    print(f"\n[Permi] Export failed: {e}\n")
 
             # ── Feedback — runs after EVERY scan, including high-severity ones
             # BUG FIX: was using `url` (None in path mode) — now correctly uses `path`

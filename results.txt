@@ -1,0 +1,125 @@
+========================================================================
+  PERMI — AI-POWERED VULNERABILITY SCANNER
+  Built in Nigeria. For Nigeria. Then for the World.
+  github.com/Peternasarah/permi
+========================================================================
+  Scan target : ./test_project
+  Exported at : 2026-04-27 17:13:18
+========================================================================
+
+AI FILTER SUMMARY
+========================================================================
+  Raw findings     : 9
+  Confirmed real   : 9
+  False positives  : 0 removed (0% noise reduction)
+
+  High    : 5
+  Medium  : 4
+  Low     : 0
+========================================================================
+
+FINDINGS (9 total)
+
+------------------------------------------------------------------------
+  [1] [HIGH] SQL001  SQL Injection — string concatenation
+
+  File  : C:\Users\dashe\Permi\test_project\app\auth.py
+  Line  : 8
+  Code  : cursor.execute("SELECT * FROM users WHERE name = " + username)
+  Why   : Raw string concatenation used to build a SQL query. An attacker can inject arbitrary SQL through user input.
+  Fix   : Use parameterised queries: cursor.execute("SELECT * FROM users WHERE name = ?", (username,))
+  AI    : REAL [95%]
+          User input directly concatenated into SQL query
+
+------------------------------------------------------------------------
+  [2] [HIGH] SEC001  Hardcoded secret — generic password or key assignment
+
+  File  : C:\Users\dashe\Permi\test_project\app\auth.py
+  Line  : 12
+  Code  : db_password = "admin1234"
+  Why   : A variable named password, secret, api_key, or token is assigned a string literal. Hardcoded credentials are a critical exposure risk if the code is shared or pushed.
+  Fix   : Move to environment variable: import os; password = os.environ.get("DB_PASSWORD")  and add the key to your .env file (never commit .env)
+  AI    : REAL [90%]
+          Hardcoded password in executable code exposes credentials.
+
+------------------------------------------------------------------------
+  [3] [MEDIUM] USSD001  USSD — missing input validation on sessionId or phoneNumber
+
+  File  : C:\Users\dashe\Permi\test_project\app\ussd.py
+  Line  : 6
+  Code  : session_id = request.form["sessionId"]
+  Why   : A USSD handler accesses sessionId or phoneNumber from the request without any visible validation. Unvalidated USSD inputs can be manipulated to hijack sessions or spoof callers.
+  Fix   : Validate USSD inputs before use: if not re.match(r"^[0-9+]+$", phone_number): abort(400)  Always whitelist expected formats for sessionId and phoneNumber.
+  AI    : REAL [80%]
+          sessionId is accessed directly without validation
+
+------------------------------------------------------------------------
+  [4] [MEDIUM] USSD001  USSD — missing input validation on sessionId or phoneNumber
+
+  File  : C:\Users\dashe\Permi\test_project\app\ussd.py
+  Line  : 7
+  Code  : phone      = request.form["phoneNumber"]
+  Why   : A USSD handler accesses sessionId or phoneNumber from the request without any visible validation. Unvalidated USSD inputs can be manipulated to hijack sessions or spoof callers.
+  Fix   : Validate USSD inputs before use: if not re.match(r"^[0-9+]+$", phone_number): abort(400)  Always whitelist expected formats for sessionId and phoneNumber.
+  AI    : REAL [80%]
+          User-controlled input reaches vulnerable point without validation
+
+------------------------------------------------------------------------
+  [5] [MEDIUM] USSD001  USSD — missing input validation on sessionId or phoneNumber
+
+  File  : C:\Users\dashe\Permi\test_project\app\ussd.py
+  Line  : 8
+  Code  : service    = request.form["serviceCode"]
+  Why   : A USSD handler accesses sessionId or phoneNumber from the request without any visible validation. Unvalidated USSD inputs can be manipulated to hijack sessions or spoof callers.
+  Fix   : Validate USSD inputs before use: if not re.match(r"^[0-9+]+$", phone_number): abort(400)  Always whitelist expected formats for sessionId and phoneNumber.
+  AI    : REAL [80%]
+          The code accesses request.form directly without visible input validation.
+
+------------------------------------------------------------------------
+  [6] [HIGH] INS003  Insecure — use of eval() on external input
+
+  File  : C:\Users\dashe\Permi\test_project\app\ussd.py
+  Line  : 11
+  Code  : result = eval(user_input)   # arbitrary code execution
+  Why   : eval() is called with a variable argument. If the variable contains user-supplied data, this allows arbitrary code execution.
+  Fix   : Replace eval() with a safe alternative. For maths: use ast.literal_eval() or the operator module. Never pass user input to eval().
+  AI    : REAL [90%]
+          eval() called with user_input enables arbitrary code execution
+
+------------------------------------------------------------------------
+  [7] [HIGH] INS002  Insecure — SSL/TLS verification disabled
+
+  File  : C:\Users\dashe\Permi\test_project\app\views.py
+  Line  : 6
+  Code  : response = requests.get(url, verify=False)
+  Why   : verify=False is passed to a requests call. This disables certificate validation and exposes the app to man-in-the-middle attacks.
+  Fix   : Remove verify=False. If you need a custom CA: requests.get(url, verify="/path/to/ca-bundle.crt")
+  AI    : REAL [95%]
+          verify=False disables SSL/TLS validation, exposing to MITM attacks.
+
+------------------------------------------------------------------------
+  [8] [HIGH] XSS001  XSS — innerHTML assignment
+
+  File  : C:\Users\dashe\Permi\test_project\app\views.py
+  Line  : 11
+  Code  : return f"<div id='output'></div><script>document.getElementById('output').innerHTML = {comment}</script>"
+  Why   : innerHTML is set dynamically. If any part of the value comes from user input, this is a direct XSS vector.
+  Fix   : Sanitise before assigning: element.textContent = userInput  (use textContent not innerHTML, or sanitise with DOMPurify)
+  AI    : REAL [90%]
+          User-controlled input directly assigned to innerHTML creates XSS risk.
+
+------------------------------------------------------------------------
+  [9] [MEDIUM] INS001  Insecure — debug mode enabled in production
+
+  File  : C:\Users\dashe\Permi\test_project\app\views.py
+  Line  : 13
+  Code  : debug = True
+  Why   : debug=True is set, likely in a Flask or Django app. Debug mode exposes stack traces and an interactive console to anyone who triggers an error.
+  Fix   : Set debug=False in production. Use environment variable: app.debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+  AI    : REAL [90%]
+          Debug mode is enabled in production code.
+
+========================================================================
+  SCAN COMPLETE
+  9 finding(s)  |  0 false positive(s) removed
+========================================================================
