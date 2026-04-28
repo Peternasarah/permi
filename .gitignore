@@ -8,3 +8,6 @@ permi.egg-info/
 start.bat
 chop.py
 apply_patch.py
+results.md
+results.txt
+findings.md

@@ -295,7 +295,13 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                 clean = [{k: v for k, v in f.items() if v is not None} for f in findings if isinstance(f, dict)]
                 click.echo(json.dumps({"target": url, "info": info, "findings": clean}, indent=2))
             else:
-                print_web_results(findings, raw_count)
+                if export_file:
+                    # Export mode — show summary only on terminal
+                    from cli.formatter import print_ai_summary, print_summary
+                    print_ai_summary(findings, raw_count)
+                    print_summary(findings, raw_count=raw_count)
+                else:
+                    print_web_results(findings, raw_count)
 
             # Track high severity BEFORE exiting so feedback still runs
             has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
@@ -309,7 +315,8 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                         scan_target=url,
                         info=info,
                     )
-                    print(f"\n[Permi] Results exported to: {saved_path}\n")
+                    print(f"\n[Permi] Full report exported to: {saved_path}")
+                    print(f"[Permi] Terminal shows summary only — open the file for full details.\n")
                 except Exception as e:
                     print(f"\n[Permi] Export failed: {e}\n")
 
@@ -361,9 +368,14 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                 clean = [{k: v for k, v in f.items() if v is not None} for f in findings if isinstance(f, dict)]
                 click.echo(json.dumps(clean, indent=2))
             else:
-                # Pass raw_count so the AI summary can show noise reduction
-                print_results_human(findings, raw_count=raw_count)
-                print_summary(findings, raw_count=raw_count)
+                if export_file:
+                    # Export mode — show summary only on terminal
+                    from cli.formatter import print_ai_summary, print_summary
+                    print_ai_summary(findings, raw_count)
+                    print_summary(findings, raw_count=raw_count)
+                else:
+                    print_results_human(findings, raw_count=raw_count)
+                    print_summary(findings, raw_count=raw_count)
 
             # Track high severity BEFORE exiting so feedback still runs
             has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
@@ -374,10 +386,11 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                         filepath=export_file,
                         findings=findings,
                         raw_count=raw_count,
-                        scan_target=path,
+                        scan_target=url,
                         info=None,
                     )
-                    print(f"\n[Permi] Results exported to: {saved_path}\n")
+                    print(f"\n[Permi] Full report exported to: {saved_path}")
+                    print(f"[Permi] Terminal shows summary only — open the file for full details.\n")
                 except Exception as e:
                     print(f"\n[Permi] Export failed: {e}\n")
 

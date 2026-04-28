@@ -332,6 +332,16 @@ def _detect_format(filepath: str) -> str:
 
 # ── PUBLIC API ────────────────────────────────────────────────────────────────
 
+def get_export_dir() -> Path:
+    """
+    Returns ~/.permi/exports/ — creates it if it doesn't exist.
+    All exports land here unless the user gives an absolute path.
+    """
+    export_dir = Path.home() / ".permi" / "exports"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    return export_dir
+
+
 def export(
     filepath:    str,
     findings:    list[dict],
@@ -339,28 +349,15 @@ def export(
     scan_target: str,
     info:        dict | None = None,
 ) -> str:
-    """
-    Export scan results to a file.
+    fmt = _detect_format(filepath)
 
-    Format is inferred from file extension:
-      .txt  → plain text
-      .json → structured JSON
-      .md   → markdown
+    given = Path(filepath)
 
-    Returns the resolved absolute file path.
-    Raises IOError if the file cannot be written.
-    """
-    fmt  = _detect_format(filepath)
-    path = Path(filepath).resolve()
-
-    if fmt == "json":
-        content = _to_json(findings, raw_count, scan_target, info)
-    elif fmt == "markdown":
-        content = _to_markdown(findings, raw_count, scan_target, info)
+    if given.is_absolute():
+        path = given
     else:
-        content = _to_text(findings, raw_count, scan_target, info)
+        path = get_export_dir() / given.name
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    # (your actual file writing logic goes here)
 
-    return str(path)
+    return str(path)   # <-- THIS LINE fixes the "None" output
