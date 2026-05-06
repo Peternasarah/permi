@@ -1,29 +1,71 @@
 # cli/main.py
 # Permi command-line interface.
-#
-# Commands:
-#   permi scan  --url  https://target.com    → live web scanner
-#   permi scan  --path ./folder              → static source scanner
-#   permi setup --api-key sk-or-...          → save API key to ~/.permi/config.json
-#   permi info                               → show config paths and status
-#   permi feedback                           → submit feedback
 
 from __future__ import annotations
 
 import json
 import sys
+import time
+import platform
+import importlib.metadata
+from pathlib import Path
+
 import click
 from colorama import Fore, Style, init
 
 init(autoreset=True)
 
 from cli.formatter import print_results_human, print_summary, print_ai_summary
-from cli.feedback import collect as collect_feedback
-from scanner.scan import scan as scan_path
-from cli.exporter import export as export_results
+from cli.feedback  import collect as collect_feedback
+from scanner.scan  import scan as scan_path
+from cli.exporter  import export as export_results
 
 
-# ── BANNER ────────────────────────────────────────────────────────────────────
+# ── helpers ───────────────────────────────────────────────────────────────────
+def _get_version() -> str:
+    try:
+        return importlib.metadata.version("permi")
+    except Exception:
+        return "dev"
+
+
+def _send_telemetry(
+    findings:       list,
+    raw_count:      int,
+    scan_mode:      str,
+    flags_used:     list,
+    export_fmt,
+    used_community: bool,
+) -> None:
+    """Send anonymous telemetry if opted in. Never blocks or crashes."""
+    from db.config import is_telemetry_enabled, get_proxy_url
+    import requests as req
+
+    if not is_telemetry_enabled():
+        return
+    try:
+        payload = {
+            "permi_version":   _get_version(),
+            "os_name":         platform.system(),
+            "python_version":  f"{sys.version_info.major}.{sys.version_info.minor}",
+            "scan_mode":       scan_mode,
+            "flags_used":      flags_used,
+            "raw_count":       raw_count,
+            "real_count":      len(findings),
+            "fp_count":        raw_count - len(findings),
+            "severity_high":   sum(1 for f in findings if f.get("severity") == "high"),
+            "severity_medium": sum(1 for f in findings if f.get("severity") == "medium"),
+            "severity_low":    sum(1 for f in findings if f.get("severity") == "low"),
+            "rule_ids_fired":  list({f.get("rule_id") for f in findings if f.get("rule_id")}),
+            "export_format":   export_fmt,
+            "used_community":  used_community,
+        }
+        req.post(f"{get_proxy_url()}/v1/telemetry", json=payload, timeout=5)
+    except Exception:
+        pass
+
+
+# ── banner ────────────────────────────────────────────────────────────────────
 def print_banner():
     print(f"""
 {Fore.CYAN}{Style.BRIGHT}  ██████╗ ███████╗██████╗ ███╗   ███╗██╗
@@ -38,6 +80,7 @@ def print_banner():
 """)
 
 
+# ── web scan helpers ──────────────────────────────────────────────────────────
 def print_web_info(info: dict):
     print(f"\n{Fore.CYAN}{'─' * 60}{Style.RESET_ALL}")
     print(f"{Fore.WHITE}{Style.BRIGHT}  TARGET INFORMATION{Style.RESET_ALL}")
@@ -59,9 +102,15 @@ def print_web_finding(finding: dict, index: int):
     color  = colors.get(sev, Fore.WHITE)
 
     verdict_colors = {
-        "REAL":          Fore.RED,
-        "FP":            Fore.GREEN,
+        "REAL":           Fore.RED,
+        "REVIEW":         Fore.YELLOW,
+        "FP":             Fore.GREEN,
         "AI_UNAVAILABLE": Fore.YELLOW,
+    }
+    verdict_labels = {
+        "REAL":           "REAL",
+        "REVIEW":         "REVIEW — manual check needed",
+        "AI_UNAVAILABLE": "AI UNAVAILABLE — review manually",
     }
 
     print(f"{Fore.WHITE}{'─' * 72}{Style.RESET_ALL}")
@@ -80,36 +129,32 @@ def print_web_finding(finding: dict, index: int):
     print(f"  {Fore.WHITE}Evidence :{Style.RESET_ALL} {finding.get('evidence', '—')}")
     print(f"  {Fore.WHITE}Why      :{Style.RESET_ALL} {finding.get('description', '—')}")
 
-    verdict = finding.get("ai_verdict")
+    verdict    = finding.get("ai_verdict")
+    confidence = finding.get("ai_confidence")
     if verdict:
-        vc    = verdict_colors.get(verdict, Fore.WHITE)
-        label = "REVIEW" if verdict == "AI_UNAVAILABLE" else verdict
+        vc       = verdict_colors.get(verdict, Fore.WHITE)
+        v_label  = verdict_labels.get(verdict, verdict)
+        conf_str = f" [{confidence}% confidence]" if confidence is not None else ""
         print(
             f"  {Fore.WHITE}AI       :{Style.RESET_ALL} "
-            f"{vc}{Style.BRIGHT}{label}{Style.RESET_ALL}  "
-            f"{finding.get('ai_explanation', '')}"
+            f"{vc}{Style.BRIGHT}{v_label}{Style.RESET_ALL}"
+            f"{conf_str}  {finding.get('ai_explanation', '')}"
         )
     print()
 
 
 def print_web_results(findings: list, raw_count: int):
-    """Print web scan findings with AI summary upfront."""
-    # AI summary at the top — shows value immediately
     if raw_count > 0:
         print_ai_summary(findings, raw_count)
-
     if not findings:
         print(f"\n{Fore.GREEN}{Style.BRIGHT}  ✅  No vulnerabilities found.\n{Style.RESET_ALL}")
         return
-
     for i, f in enumerate(findings, 1):
         print_web_finding(f, i)
-
     high   = sum(1 for f in findings if f.get("severity") == "high")
     medium = sum(1 for f in findings if f.get("severity") == "medium")
     low    = sum(1 for f in findings if f.get("severity") == "low")
     fp     = raw_count - len(findings)
-
     print(f"\n{'═' * 72}")
     print(f"{Fore.WHITE}{Style.BRIGHT}  SCAN SUMMARY{Style.RESET_ALL}")
     print(f"{'═' * 72}")
@@ -120,7 +165,7 @@ def print_web_results(findings: list, raw_count: int):
     print(f"{'═' * 72}\n")
 
 
-# ── CLI GROUP ─────────────────────────────────────────────────────────────────
+# ── CLI group ─────────────────────────────────────────────────────────────────
 @click.group()
 def cli():
     """
@@ -134,7 +179,7 @@ def cli():
     pass
 
 
-# ── SCAN COMMAND ──────────────────────────────────────────────────────────────
+# ── scan command ──────────────────────────────────────────────────────────────
 @cli.command()
 @click.option("--url",  "-u", default=None,
               help="Live URL to scan (e.g. https://yoursite.com).")
@@ -153,26 +198,18 @@ def cli():
               help="Project name to store in the database.")
 @click.option("--max-pages", default=30, show_default=True,
               help="Maximum pages to crawl (URL scan only).")
-@click.option(
-    "--export", "-e",
-    "export_file",
-    default=None,
-    metavar="FILE",
-    help=(
-        "Export full results to a file. "
-        "Format is inferred from extension: "
-        ".txt (plain text), .json (structured), .md (markdown). "
-        "Example: --export results.txt"
-    ),
-)
-@click.option("--include-subdomains", is_flag=True, default=False,
+@click.option("--export", "-e", "export_file",
+              default=None, metavar="FILE",
+              help="Export full results to file (.txt, .json, .md).")
+@click.option("--include-subdomains", "include_subdomains",
+              is_flag=True, default=False,
               help=(
                   "Also scan subdomains of the target. "
                   "e.g. scanning soso.edu.ng will also crawl portal.soso.edu.ng. "
                   "External domains are never followed. (URL scan only)"
-                  ),
-              )
-def scan(url, path, output, severity, offline, project, max_pages, include_subdomains, export_file):
+              ))
+def scan(url, path, output, severity, offline, project,
+         max_pages, export_file, include_subdomains):
     """
     Scan a live URL or codebase for vulnerabilities.
 
@@ -181,6 +218,9 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
 
       Scan a live website:
         permi scan --url https://yoursite.com
+
+      Scan including subdomains:
+        permi scan --url https://yoursite.com --include-subdomains
 
       Scan a local project:
         permi scan --path ./myapp
@@ -191,32 +231,11 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
       High severity only:
         permi scan --url https://yoursite.com --severity high
 
-      Export as JSON:
-        permi scan --path ./myapp --output json
+      Export to file (terminal shows summary only):
+        permi scan --path ./myapp --export results.md
 
       Skip AI filter:
         permi scan --path ./myapp --offline
-
-      Scan including subdomains:
-        permi scan --url https://soso.edu.ng --include-subdomains
-
-      Export to text file (no truncation):
-        permi scan --path ./myapp --export results.txt
-
-      Export to markdown (great for GitHub issues):
-        permi scan --url https://yoursite.com --export report.md
-
-      Export to JSON (for CI/CD pipelines):
-        permi scan --path ./myapp --export findings.json
-        
-    \b
-    SCAN MODES
-
-      --url   Active HTTP scanning — crawls the site, tests SQL injection,
-              XSS, and checks security headers on a live application.
-
-      --path  Static source scanning — reads code files and detects
-              vulnerabilities before they reach production.
 
     \b
     EXIT CODES
@@ -228,20 +247,22 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
         click.echo(
             f"\n{Fore.RED}[Error] Provide either --url or --path.\n\n"
             f"  permi scan --url https://yoursite.com\n"
-            f"  permi scan --path ./myproject\n"
-            f"  permi scan --path https://github.com/user/repo\n{Style.RESET_ALL}"
+            f"  permi scan --path ./myproject\n{Style.RESET_ALL}"
         )
         sys.exit(1)
 
     if url and path:
-        click.echo(f"\n{Fore.RED}[Error] Provide either --url or --path, not both.{Style.RESET_ALL}\n")
+        click.echo(
+            f"\n{Fore.RED}[Error] Provide either --url or --path, not both.{Style.RESET_ALL}\n"
+        )
         sys.exit(1)
 
     if output == "human":
         print_banner()
 
-    order       = {"high": 1, "medium": 2, "low": 3}
-    has_high    = False  # track this so feedback runs before exit
+    order    = {"high": 1, "medium": 2, "low": 3}
+    has_high = False
+    info     = None
 
     # ════════════════════════════════════════════════════════════════════
     # MODE A — URL scan
@@ -249,8 +270,8 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
     if url:
         try:
             from scanner.web_scanner import scan_url
-            from ai_filter.filter import run_filter
-            from db.config import get_api_key
+            from ai_filter.filter    import run_filter
+            from db.config           import get_api_key, get_community_token
 
             if not url.startswith(("http://", "https://")):
                 url = "https://" + url
@@ -263,7 +284,7 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                 url,
                 max_pages=max_pages,
                 include_subdomains=include_subdomains,
-                )
+            )
             raw_count = len(raw_findings)
 
             print(f"\n{Fore.WHITE}[Permi] Engine found {raw_count} raw finding(s){Style.RESET_ALL}\n")
@@ -276,51 +297,57 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                     print(f"{Fore.YELLOW}[Permi] Offline mode — AI filter skipped.{Style.RESET_ALL}\n")
                 findings = raw_findings
             else:
-                if not get_api_key():
+                if not get_api_key() and not get_community_token():
                     print(
-                        f"{Fore.YELLOW}[Permi] No API key found — running in offline mode.\n"
-                        f"[Permi] To enable AI filtering run: permi setup --api-key YOUR_KEY\n"
-                        f"[Permi] Get a free key at: openrouter.ai{Style.RESET_ALL}\n"
+                        f"{Fore.YELLOW}[Permi] No API key or community token found.\n"
+                        f"[Permi] Run: permi setup --community   (50 free credits)\n"
+                        f"[Permi] Or:  permi setup --api-key YOUR_KEY{Style.RESET_ALL}\n"
                     )
-                findings = run_filter(raw_findings, offline=not get_api_key())
+                    findings = raw_findings
+                else:
+                    findings = run_filter(raw_findings, offline=False)
 
             if severity != "all":
                 level    = order[severity]
                 findings = [
                     f for f in findings
-                    if isinstance(f, dict) and order.get(f.get("severity", "low"), 99) <= level
+                    if isinstance(f, dict)
+                    and order.get(f.get("severity", "low"), 99) <= level
                 ]
 
+            has_high = any(
+                f.get("severity") == "high"
+                for f in findings if isinstance(f, dict)
+            )
+
             if output == "json":
-                clean = [{k: v for k, v in f.items() if v is not None} for f in findings if isinstance(f, dict)]
+                clean = [
+                    {k: v for k, v in f.items() if v is not None}
+                    for f in findings if isinstance(f, dict)
+                ]
                 click.echo(json.dumps({"target": url, "info": info, "findings": clean}, indent=2))
             else:
                 if export_file:
-                    # Export mode — show summary only on terminal
-                    from cli.formatter import print_ai_summary, print_summary
                     print_ai_summary(findings, raw_count)
                     print_summary(findings, raw_count=raw_count)
                 else:
                     print_web_results(findings, raw_count)
 
-            # Track high severity BEFORE exiting so feedback still runs
-            has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
-
             if export_file and output != "json":
                 try:
-                    saved_path = export_results(
+                    saved = export_results(
                         filepath=export_file,
                         findings=findings,
                         raw_count=raw_count,
                         scan_target=url,
                         info=info,
                     )
-                    print(f"\n[Permi] Full report exported to: {saved_path}")
-                    print(f"[Permi] Terminal shows summary only — open the file for full details.\n")
+                    print(f"\n{Fore.GREEN}[Permi] Full report exported to: {saved}{Style.RESET_ALL}")
+                    print(f"{Fore.WHITE}[Permi] Terminal shows summary only — open the file for full details.{Style.RESET_ALL}\n")
                 except Exception as e:
-                    print(f"\n[Permi] Export failed: {e}\n")
+                    print(f"\n{Fore.RED}[Permi] Export failed: {e}{Style.RESET_ALL}\n")
 
-            # ── Feedback — runs after EVERY scan, including high-severity ones
+            
             try:
                 collect_feedback(scan_target=url, findings_count=len(findings))
             except Exception:
@@ -330,7 +357,10 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                 sys.exit(1)
 
         except ImportError as e:
-            click.echo(f"\n{Fore.RED}[Error] Missing dependencies for web scanning.\nRun: pip install httpx beautifulsoup4\nDetail: {e}{Style.RESET_ALL}\n")
+            click.echo(
+                f"\n{Fore.RED}[Error] Missing dependencies for web scanning.\n"
+                f"Run: pip install httpx beautifulsoup4\nDetail: {e}{Style.RESET_ALL}\n"
+            )
             sys.exit(1)
         except Exception as e:
             click.echo(f"\n{Fore.RED}[Error] {e}{Style.RESET_ALL}\n")
@@ -341,13 +371,13 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
     # ════════════════════════════════════════════════════════════════════
     else:
         try:
-            from db.config import get_api_key
+            from db.config import get_api_key, get_community_token
 
-            if not offline and not get_api_key():
+            if not offline and not get_api_key() and not get_community_token():
                 print(
-                    f"{Fore.YELLOW}[Permi] No API key found — AI filter will be skipped.\n"
-                    f"[Permi] To enable AI filtering run: permi setup --api-key YOUR_KEY\n"
-                    f"[Permi] Get a free key at: openrouter.ai{Style.RESET_ALL}\n"
+                    f"{Fore.YELLOW}[Permi] No API key or community token found — AI filter skipped.\n"
+                    f"[Permi] Run: permi setup --community   (50 free credits)\n"
+                    f"[Permi] Or:  permi setup --api-key YOUR_KEY{Style.RESET_ALL}\n"
                 )
                 offline = True
 
@@ -361,41 +391,44 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
                 level    = order[severity]
                 findings = [
                     f for f in findings
-                    if isinstance(f, dict) and order.get(f.get("severity", "low"), 99) <= level
+                    if isinstance(f, dict)
+                    and order.get(f.get("severity", "low"), 99) <= level
                 ]
 
+            has_high = any(
+                f.get("severity") == "high"
+                for f in findings if isinstance(f, dict)
+            )
+
             if output == "json":
-                clean = [{k: v for k, v in f.items() if v is not None} for f in findings if isinstance(f, dict)]
+                clean = [
+                    {k: v for k, v in f.items() if v is not None}
+                    for f in findings if isinstance(f, dict)
+                ]
                 click.echo(json.dumps(clean, indent=2))
             else:
                 if export_file:
-                    # Export mode — show summary only on terminal
-                    from cli.formatter import print_ai_summary, print_summary
                     print_ai_summary(findings, raw_count)
                     print_summary(findings, raw_count=raw_count)
                 else:
                     print_results_human(findings, raw_count=raw_count)
                     print_summary(findings, raw_count=raw_count)
 
-            # Track high severity BEFORE exiting so feedback still runs
-            has_high = any(f.get("severity") == "high" for f in findings if isinstance(f, dict))
-
             if export_file and output != "json":
                 try:
-                    saved_path = export_results(
+                    saved = export_results(
                         filepath=export_file,
                         findings=findings,
                         raw_count=raw_count,
-                        scan_target=url,
+                        scan_target=path,   # FIX: was `url` (None in path mode)
                         info=None,
                     )
-                    print(f"\n[Permi] Full report exported to: {saved_path}")
-                    print(f"[Permi] Terminal shows summary only — open the file for full details.\n")
+                    print(f"\n{Fore.GREEN}[Permi] Full report exported to: {saved}{Style.RESET_ALL}")
+                    print(f"{Fore.WHITE}[Permi] Terminal shows summary only — open the file for full details.{Style.RESET_ALL}\n")
                 except Exception as e:
-                    print(f"\n[Permi] Export failed: {e}\n")
+                    print(f"\n{Fore.RED}[Permi] Export failed: {e}{Style.RESET_ALL}\n")
 
-            # ── Feedback — runs after EVERY scan, including high-severity ones
-            # BUG FIX: was using `url` (None in path mode) — now correctly uses `path`
+            
             try:
                 collect_feedback(scan_target=path, findings_count=len(findings))
             except Exception:
@@ -415,101 +448,209 @@ def scan(url, path, output, severity, offline, project, max_pages, include_subdo
             sys.exit(1)
 
 
-# ── SETUP COMMAND ─────────────────────────────────────────────────────────────
+# ── setup command ─────────────────────────────────────────────────────────────
 @cli.command()
-@click.option("--api-key", required=True,
+@click.option("--api-key", default=None,
               help="Your OpenRouter API key (get one free at openrouter.ai).")
-def setup(api_key):
+@click.option("--community", is_flag=True, default=False,
+              help="Register for 50 free AI credits via the Permi community proxy.")
+
+def setup(api_key, community):
     """
-    Save your OpenRouter API key for AI-powered false positive filtering.
+    Configure Permi — API key, community access, or telemetry.
 
     \b
-    EXAMPLE
-      permi setup --api-key sk-or-your-key-here
+    EXAMPLES
+      Personal API key (unlimited):
+        permi setup --api-key sk-or-your-key-here
 
-    Get a free API key at: https://openrouter.ai
-    Your key is saved to ~/.permi/config.json on your machine only.
-    It is never sent anywhere except OpenRouter's API.
+      Free community credits (50 calls, no key needed):
+        permi setup --community
+
+      Enable anonymous telemetry:
+        permi setup --telemetry on
     """
-    from db.config import save_api_key, get_config_path
+    import requests as req
+    from db.config import (
+        save_api_key, save_community_token, get_config_path, get_proxy_url,
+    )
 
-    if not api_key.startswith("sk-"):
+    
+    # ── Community proxy registration with retry ───────────────────────────────
+    if community:
+        proxy_url  = get_proxy_url()
+        max_wait   = 90    # Render cold start can take up to 60s
+        interval   = 8     # seconds between retries
+        attempts   = max_wait // interval
+        registered = False
+
         click.echo(
-            f"\n{Fore.YELLOW}[Warning] This key doesn't look like an OpenRouter key "
-            f"(expected to start with 'sk-'). Saving anyway.{Style.RESET_ALL}\n"
+            f"\n{Fore.CYAN}[Permi] Connecting to community proxy...\n"
+            f"[Permi] Render may need up to 60s to wake — retrying automatically.{Style.RESET_ALL}\n"
         )
 
-    save_api_key(api_key)
-    config_path = get_config_path()
+        for attempt in range(1, attempts + 1):
+            try:
+                click.echo(f"  Attempt {attempt}/{attempts}...", nl=False)
+                response = req.get(f"{proxy_url}/v1/register", timeout=12)
+                response.raise_for_status()
+                data      = response.json()
+                token     = data["token"]
+                remaining = data["credits_remaining"]
+                message   = data.get("message", "")
 
-    click.echo(f"\n{Fore.GREEN}[Permi] ✅  API key saved to: {config_path}{Style.RESET_ALL}")
-    click.echo(f"{Fore.WHITE}[Permi] AI false positive filtering is now enabled.{Style.RESET_ALL}")
-    click.echo(f"{Fore.WHITE}[Permi] Run a scan: permi scan --path ./myapp{Style.RESET_ALL}\n")
+                save_community_token(token)
+                registered = True
+
+                click.echo(f" {Fore.GREEN}Connected!{Style.RESET_ALL}")
+                click.echo(
+                    f"\n{Fore.GREEN}[Permi] ✅  Community access configured!{Style.RESET_ALL}\n"
+                    f"\n  Credits    : {Fore.GREEN}{remaining} free AI calls{Style.RESET_ALL}"
+                    f"\n  Token      : {token[:8]}...{token[-4:]} (saved to config)\n"
+                )
+                if message:
+                    click.echo(f"  {Fore.CYAN}{message}{Style.RESET_ALL}\n")
+                click.echo(
+                    f"{Fore.WHITE}[Permi] Run a scan     : permi scan --path ./myapp{Style.RESET_ALL}\n"
+                    f"{Fore.WHITE}[Permi] Upgrade later  : permi setup --api-key YOUR_KEY{Style.RESET_ALL}\n"
+                )
+                break
+
+            except req.exceptions.Timeout:
+                click.echo(f" {Fore.YELLOW}timeout, retrying...{Style.RESET_ALL}")
+            except req.exceptions.ConnectionError:
+                click.echo(f" {Fore.YELLOW}connection error, retrying...{Style.RESET_ALL}")
+            except Exception as e:
+                click.echo(f" {Fore.RED}failed ({e}){Style.RESET_ALL}")
+
+            if attempt < attempts:
+                time.sleep(interval)
+
+        if not registered:
+            click.echo(
+                f"\n{Fore.RED}[Permi] Could not reach proxy after {max_wait}s.\n"
+                f"[Permi] Check your internet and try again.\n"
+                f"[Permi] Or get your own free key: openrouter.ai{Style.RESET_ALL}\n"
+            )
+        return
+
+    # ── Personal API key ──────────────────────────────────────────────────────
+    if api_key:
+        if not api_key.startswith("sk-"):
+            click.echo(
+                f"\n{Fore.YELLOW}[Warning] Key does not look like an OpenRouter key "
+                f"(expected sk-...). Saving anyway.{Style.RESET_ALL}\n"
+            )
+        save_api_key(api_key)
+        click.echo(
+            f"\n{Fore.GREEN}[Permi] ✅  API key saved to: {get_config_path()}{Style.RESET_ALL}\n"
+            f"{Fore.WHITE}[Permi] AI filtering is now enabled (unlimited).{Style.RESET_ALL}\n"
+            f"{Fore.WHITE}[Permi] Run a scan: permi scan --path ./myapp{Style.RESET_ALL}\n"
+        )
+        return
+
+    # ── No option given ───────────────────────────────────────────────────────
+    click.echo(
+        f"\n{Fore.YELLOW}[Permi] Please provide an option:\n\n"
+        f"  Personal API key : permi setup --api-key YOUR_KEY\n"
+        f"  Free 50 credits  : permi setup --community\n"
+        f"  Telemetry        : permi setup --telemetry on|off\n"
+        f"{Style.RESET_ALL}"
+    )
 
 
-# ── INFO COMMAND ──────────────────────────────────────────────────────────────
+# ── info command ──────────────────────────────────────────────────────────────
 @cli.command()
 def info():
-    """
-    Show Permi's configuration status and file locations.
-    """
-    from db.config import get_api_key, get_config_path, get_db_path
-    import importlib.metadata
-
-    try:
-        version = importlib.metadata.version("permi")
-    except Exception:
-        version = "dev"
-
-    api_key    = get_api_key()
-    key_status = (
-        f"{Fore.GREEN}✅  Configured{Style.RESET_ALL}" if api_key
-        else f"{Fore.RED}❌  Not set — run: permi setup --api-key YOUR_KEY{Style.RESET_ALL}"
+    """Show Permi's configuration status and file locations."""
+    import requests as req
+    from db.config import (
+        get_api_key, get_config_path, get_db_path,
+        get_community_token, is_telemetry_enabled, get_proxy_url,
     )
-    key_source = ""
+
+    version = _get_version()
+    api_key = get_api_key()
 
     if api_key:
+        key_status = f"{Fore.GREEN}✅  Configured{Style.RESET_ALL}"
         import os
-        from pathlib import Path
         if os.environ.get("OPENROUTER_API_KEY"):
             key_source = " (from environment variable)"
         elif get_config_path().exists():
             key_source = f" (from {get_config_path()})"
-        elif (Path.cwd() / ".env").exists():
+        else:
             key_source = " (from .env file)"
+    else:
+        key_status = f"{Fore.RED}❌  Not set{Style.RESET_ALL}"
+        key_source = ""
 
+    # Community credits — each on its own line
+    community_token = get_community_token()
+    if community_token:
+        try:
+            r         = req.get(
+                f"{get_proxy_url()}/v1/status",
+                headers={"X-Permi-Token": community_token},
+                timeout=8,
+            )
+            data      = r.json()
+            remaining = data.get("credits_remaining", "?")
+            used      = data.get("credits_used", "?")
+            total     = data.get("credits_total", 50)
+            cr_colour = (
+                Fore.GREEN if isinstance(remaining, int) and remaining > 15
+                else Fore.YELLOW
+            )
+            community_status = (
+                f"{cr_colour}{remaining}/{total} credits remaining{Style.RESET_ALL} "
+                f"({used} used)"
+            )
+        except Exception:
+            community_status = (
+                f"{Fore.YELLOW}Token configured (could not fetch status){Style.RESET_ALL}"
+            )
+    else:
+        community_status = (
+            f"{Fore.YELLOW}Not configured{Style.RESET_ALL}"
+            f" — run: permi setup --community"
+        )
+
+    telem_status = (
+        f"{Fore.GREEN}enabled{Style.RESET_ALL}"
+        if is_telemetry_enabled()
+        else f"{Fore.YELLOW}disabled{Style.RESET_ALL} — run: permi setup --telemetry on"
+    )
+
+    # Each field on its own line — no concatenation onto the same line
     click.echo(f"""
 {Fore.CYAN}{Style.BRIGHT}  Permi — Configuration Info{Style.RESET_ALL}
-  {'─' * 50}
-  Version     : {version}
-  Database    : {get_db_path()}
-  Config file : {get_config_path()}
-  API key     : {key_status}{key_source}
-  {'─' * 50}
-  To set API key  : permi setup --api-key YOUR_KEY
-  To scan a URL   : permi scan --url https://yoursite.com
-  To scan code    : permi scan --path ./myapp
-  Free API key    : https://openrouter.ai
+  {'─' * 56}
+  {'Version':<16}: {version}
+  {'Database':<16}: {get_db_path()}
+  {'Config file':<16}: {get_config_path()}
+  {'API key':<16}: {key_status}{key_source}
+  {'Community':<16}: {community_status}
+  {'Telemetry':<16}: {telem_status}
+  {'─' * 56}
+  To set API key   : permi setup --api-key YOUR_KEY
+  Free 50 credits  : permi setup --community
+  To scan a URL    : permi scan --url https://yoursite.com
+  To scan code     : permi scan --path ./myapp
+  Free API key     : https://openrouter.ai
     """)
 
 
-# ── FEEDBACK COMMAND ──────────────────────────────────────────────────────────
+# ── feedback command ──────────────────────────────────────────────────────────
 @cli.command()
 def feedback():
-    """
-    Share feedback about Permi — helps us build what you actually need.
-
-    \b
-    EXAMPLE
-      permi feedback
-
-    Takes less than 60 seconds. Completely optional.
-    """
+    """Share feedback about Permi — helps us build what you actually need."""
     print_banner()
     collect_feedback()
 
 
-cli.add_command(feedback, name="feedback")
+# ── register commands ─────────────────────────────────────────────────────────
 cli.add_command(scan,     name="scan")
 cli.add_command(setup,    name="setup")
 cli.add_command(info,     name="info")
+cli.add_command(feedback, name="feedback")

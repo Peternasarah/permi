@@ -1,12 +1,7 @@
 # ai_filter/filter.py
 # Takes raw findings, runs each through the LLM analyser,
 # saves verdicts to the database, and returns filtered results.
-#
-# Verdict handling:
-#   REAL          → kept, shown in full
-#   REVIEW        → kept, labelled for manual review (medium confidence)
-#   FP            → dropped silently
-#   AI_UNAVAILABLE → kept, labelled — never silently promoted to REAL
+# Shows remaining community credits after each scan if using proxy.
 
 from __future__ import annotations
 
@@ -21,7 +16,6 @@ def _update_finding_verdict(
     explanation: str,
     confidence: int | None,
 ) -> None:
-    """Write AI verdict and confidence back to the findings table."""
     conn.execute("""
         UPDATE findings
         SET ai_verdict     = ?,
@@ -34,14 +28,8 @@ def _update_finding_verdict(
 def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
     """
     Run the AI filter over a list of findings.
-
-    Args:
-        findings: Raw findings list from the scanner.
-        offline:  If True, skip all API calls and return everything as-is.
-
-    Returns:
-        Findings with verdict REAL, REVIEW, or AI_UNAVAILABLE.
-        FP findings are dropped entirely.
+    Returns findings with verdict REAL, REVIEW, or AI_UNAVAILABLE.
+    FP findings are dropped.
     """
     if not findings:
         return []
@@ -52,11 +40,14 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
 
     print(f"[Permi] Running AI filter on {len(findings)} finding(s)...\n")
 
-    conn      = get_connection()
-    keep      = []
-    fp_count  = 0
-    review    = 0
-    unavail   = 0
+    conn         = get_connection()
+    keep         = []
+    fp_count     = 0
+    review_count = 0
+    unavail      = 0
+    last_credits = None
+    last_message = None
+    backend_used = None
 
     for i, finding in enumerate(findings, start=1):
         label = f"{finding['rule_id']} line {finding['line_number']}"
@@ -66,12 +57,20 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
         verdict    = result["ai_verdict"]
         explan     = result["ai_explanation"]
         confidence = result.get("ai_confidence")
+        backend    = result.get("ai_backend", "")
 
-        # Build display string
+        # Track community proxy credits
+        if backend == "community":
+            backend_used = "community"
+            cr = result.get("community_credits_left")
+            if cr is not None:
+                last_credits = cr
+            if result.get("community_message"):
+                last_message = result["community_message"]
+
         conf_str = f" ({confidence}%)" if confidence is not None else ""
         print(f"{verdict}{conf_str}  {explan}")
 
-        # Save verdict back to DB
         if "id" in finding:
             _update_finding_verdict(conn, finding["id"], verdict, explan, confidence)
 
@@ -79,7 +78,7 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
             fp_count += 1
         else:
             if verdict == "REVIEW":
-                review += 1
+                review_count += 1
             elif verdict == "AI_UNAVAILABLE":
                 unavail += 1
             keep.append(result)
@@ -88,11 +87,27 @@ def run_filter(findings: list[dict], offline: bool = False) -> list[dict]:
 
     # ── Filter summary ────────────────────────────────────────────────────────
     parts = [f"{len(keep)} kept", f"{fp_count} false positive(s) removed"]
-    if review:
-        parts.append(f"{review} need manual review")
+    if review_count:
+        parts.append(f"{review_count} need manual review")
     if unavail:
         parts.append(f"{unavail} AI unavailable")
-
     print(f"\n[Permi] Filter complete — {' | '.join(parts)}\n")
+
+    # ── Community credits remaining ───────────────────────────────────────────
+    if backend_used == "community" and last_credits is not None:
+        from colorama import Fore, Style
+        if last_credits <= 5:
+            colour = Fore.RED
+        elif last_credits <= 15:
+            colour = Fore.YELLOW
+        else:
+            colour = Fore.GREEN
+
+        print(
+            f"  {colour}[Community] {last_credits} free AI credits remaining.{Style.RESET_ALL}"
+        )
+        if last_message:
+            print(f"  {Fore.CYAN}{last_message}{Style.RESET_ALL}")
+        print()
 
     return keep
