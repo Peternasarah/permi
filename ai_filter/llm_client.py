@@ -1,12 +1,12 @@
-# ai_filter/llm_client.py
-# The only module in Permi that makes network requests.
+# ai_filter/llm_client.py  — v0.3 (Fix A: CSP-aware prompt)
 #
-# 
+# FIX A — CSP-AWARE PROMPT:
+#   _build_prompt() now includes the target's Content-Security-Policy
+#   value and whether it blocks inline scripts. This gives the AI the
+#   context it needs to correctly verdict XSS findings on hardened targets
+#   like github.com — where reflection exists but CSP blocks execution.
 #
-# Priority:
-#   Personal API key → direct OpenRouter
-#   Community token  → proxy backend
-#   Neither          → AI_UNAVAILABLE (offline)
+# All other logic (routing, caching, retries) is unchanged.
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ MAX_RETRIES    = 3
 HIGH_THRESHOLD = 75
 LOW_THRESHOLD  = 35
 
-# In-memory cache — same finding never hits the API twice per session
 _cache: dict[str, dict] = {}
 
 
@@ -40,22 +39,70 @@ def _cache_key(finding: dict) -> str:
 
 
 def _build_prompt(finding: dict) -> str:
-    return f"""You are a senior application security engineer reviewing automated SAST scan results.
+    """
+    FIX A: Build a CSP-aware prompt for XSS findings.
+    For WEB_XSS001 findings, the prompt now includes:
+      - The Content-Security-Policy header value (if present)
+      - Whether the CSP blocks inline script execution
+    This prevents the AI from calling reflected XSS "REAL" on targets
+    that have a strong CSP (like github.com) where alert() cannot execute.
+    """
+    rule_id = finding.get("rule_id", "")
+
+    # ── Standard fields (all findings) ────────────────────────────────────────
+    base_context = f"""You are a senior application security engineer reviewing automated web scanner results.
 
 Analyze this potential vulnerability and decide if it is a true positive or false positive.
 
 --- FINDING ---
-Rule ID    : {finding.get('rule_id', 'N/A')} — {finding.get('rule_name', 'N/A')}
+Rule ID    : {rule_id} — {finding.get('rule_name', 'N/A')}
 Severity   : {finding.get('severity', 'N/A')}
-File       : {finding.get('file', 'N/A')}
+File/URL   : {finding.get('file', 'N/A')}
 Line       : {finding.get('line_number', 'N/A')}
 Code       : {finding.get('line_content', 'N/A')}
-Description: {finding.get('description', 'N/A')}
+Evidence   : {finding.get('evidence', 'N/A')}
+Description: {finding.get('description', 'N/A')}"""
+
+    # ── FIX A: XSS-specific CSP context ───────────────────────────────────────
+    if rule_id == "WEB_XSS001":
+        csp            = finding.get("csp", "not present")
+        csp_blocks     = finding.get("csp_blocks_inline", False)
+        parameter      = finding.get("parameter", "N/A")
+        payload        = finding.get("payload", "N/A")
+
+        csp_section = f"""
+Parameter  : {parameter}
+Payload    : {payload}
+CSP Header : {csp[:200] if csp and csp != 'not present' else 'not present'}
+CSP blocks inline scripts: {'YES — alert() cannot execute in browser' if csp_blocks else 'NO — inline scripts are allowed'}
 ---------------
+
+IMPORTANT GUIDANCE FOR XSS ANALYSIS:
+- Reflection in the raw HTTP response body does NOT prove exploitability.
+- If "CSP blocks inline scripts: YES", the payload CANNOT execute in a browser
+  even if reflected. Verdict should be FP unless the CSP has bypass vectors.
+- If "CSP blocks inline scripts: NO" and the payload is reflected unencoded
+  in an HTML context (not inside a URL or comment), this is likely REAL.
+- UTM tracking parameters (utm_source, utm_campaign, utm_medium, utm_content),
+  locale parameters, and marketing parameters (ref_cta, ref_loc, ref_page)
+  are typically used for analytics only and are NOT reflected into executable
+  HTML contexts on well-engineered sites. High suspicion of FP for these.
+- Parameters like 'with', 'topic', 'scid', 'source' on non-marketing pages
+  deserve higher scrutiny and may be genuinely reflected."""
+
+        prompt_body = base_context + csp_section
+
+    else:
+        # Non-XSS findings — use original prompt format
+        prompt_body = base_context + "\n---------------"
+
+    prompt_body += """
 
 Respond with a JSON object ONLY. No explanation outside the JSON. No markdown fences.
 
-{{"is_true_positive": true or false, "confidence": integer 0-100, "reason": "one sentence max 20 words"}}"""
+{"is_true_positive": true or false, "confidence": integer 0-100, "reason": "one sentence max 20 words"}"""
+
+    return prompt_body
 
 
 def _parse_response(raw: str) -> tuple[str, int, str]:
@@ -90,9 +137,7 @@ def _is_ssl_eof_error(error: Exception) -> bool:
     )
 
 
-# ── Backend A — Direct OpenRouter ─────────────────────────────────────────────
 def _analyse_direct(finding: dict, api_key: str) -> dict:
-    """Send finding directly to OpenRouter using personal API key."""
     prompt     = _build_prompt(finding)
     last_error = ""
 
@@ -116,7 +161,7 @@ def _analyse_direct(finding: dict, api_key: str) -> dict:
             )
             response.raise_for_status()
 
-            raw_content              = response.json()["choices"][0]["message"]["content"]
+            raw_content                 = response.json()["choices"][0]["message"]["content"]
             verdict, confidence, reason = _parse_response(raw_content)
 
             finding["ai_verdict"]     = verdict
@@ -152,27 +197,31 @@ def _analyse_direct(finding: dict, api_key: str) -> dict:
     return finding
 
 
-# ── Backend B — Community Proxy ────────────────────────────────────────────────
 def _analyse_proxy(finding: dict, token: str) -> dict:
-    """Send finding to community proxy using anonymous token."""
     proxy_url = get_proxy_url()
 
     payload = {
-        "rule_id":      finding.get("rule_id", ""),
-        "rule_name":    finding.get("rule_name", ""),
-        "severity":     finding.get("severity", "low"),
-        "file":         finding.get("file", ""),
-        "line_number":  finding.get("line_number", 0),
-        "line_content": finding.get("line_content", ""),
-        "description":  finding.get("description", ""),
+        "rule_id":           finding.get("rule_id", ""),
+        "rule_name":         finding.get("rule_name", ""),
+        "severity":          finding.get("severity", "low"),
+        "file":              finding.get("file", ""),
+        "line_number":       finding.get("line_number", 0),
+        "line_content":      finding.get("line_content", ""),
+        "description":       finding.get("description", ""),
+        "evidence":          finding.get("evidence", ""),
+        # FIX A: include CSP fields so proxy backend can use them too
+        "csp":               finding.get("csp", "not present"),
+        "csp_blocks_inline": finding.get("csp_blocks_inline", False),
+        "parameter":         finding.get("parameter", ""),
+        "payload":           finding.get("payload", ""),
     }
 
     try:
         response = requests.post(
             f"{proxy_url}/v1/analyze",
             headers={
-                "Content-Type":   "application/json",
-                "X-Permi-Token":  token,
+                "Content-Type":  "application/json",
+                "X-Permi-Token": token,
             },
             json=payload,
             timeout=TIMEOUT,
@@ -180,19 +229,12 @@ def _analyse_proxy(finding: dict, token: str) -> dict:
         response.raise_for_status()
         data = response.json()
 
-        verdict    = data.get("verdict", "AI_UNAVAILABLE")
-        confidence = data.get("confidence")
-        reason     = data.get("reason", "No reason provided.")
-        remaining  = data.get("credits_remaining")
-        message    = data.get("message")
-
-        # Store remaining credits so filter.py can display them
-        finding["ai_verdict"]            = verdict
-        finding["ai_confidence"]         = confidence
-        finding["ai_explanation"]        = reason
-        finding["ai_backend"]            = "community"
-        finding["community_credits_left"] = remaining
-        finding["community_message"]     = message
+        finding["ai_verdict"]             = data.get("verdict", "AI_UNAVAILABLE")
+        finding["ai_confidence"]          = data.get("confidence")
+        finding["ai_explanation"]         = data.get("reason", "No reason provided.")
+        finding["ai_backend"]             = "community"
+        finding["community_credits_left"] = data.get("credits_remaining")
+        finding["community_message"]      = data.get("message")
         return finding
 
     except Exception:
@@ -203,15 +245,13 @@ def _analyse_proxy(finding: dict, token: str) -> dict:
         return finding
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
 def analyse(finding: dict) -> dict:
     """
-    Route finding to the correct backend:
-      Personal API key → direct OpenRouter
-      Community token  → community proxy
+    Route finding to correct backend:
+      Personal API key → direct OpenRouter (CSP-aware prompt)
+      Community token  → community proxy (CSP fields included)
       Neither          → AI_UNAVAILABLE
     """
-    # Cache check
     key = _cache_key(finding)
     if key in _cache:
         cached = _cache[key]
@@ -239,7 +279,6 @@ def analyse(finding: dict) -> dict:
         finding["ai_backend"] = "none"
         return finding
 
-    # Cache successful verdicts (not AI_UNAVAILABLE)
     if result.get("ai_verdict") != "AI_UNAVAILABLE":
         _cache[key] = {
             "verdict":    result["ai_verdict"],
