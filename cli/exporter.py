@@ -1,14 +1,5 @@
 # cli/exporter.py
-# Handles exporting scan results to file.
-# Supports three formats inferred from file extension:
-#   .txt  — plain text (same as terminal output but complete, no truncation)
-#   .json — structured JSON (machine-readable, good for pipelines)
-#   .md   — markdown (good for GitHub issues, reports, documentation)
-#
-# Usage:
-#   permi scan --path ./myapp --export_file results.txt
-#   permi scan --url https://site.com --export report.md
-#   permi scan --path ./myapp --export findings.json
+
 
 from __future__ import annotations
 
@@ -334,8 +325,8 @@ def _detect_format(filepath: str) -> str:
 
 def get_export_dir() -> Path:
     """
-    Returns ~/.permi/exports/ — creates it if it doesn't exist.
-    All exports land here unless the user gives an absolute path.
+    Returns ~/.permi/exports/ and creates it (including any subfolders)
+    if it does not already exist.
     """
     export_dir = Path.home() / ".permi" / "exports"
     export_dir.mkdir(parents=True, exist_ok=True)
@@ -349,15 +340,37 @@ def export(
     scan_target: str,
     info:        dict | None = None,
 ) -> str:
-    fmt = _detect_format(filepath)
+    """
+    Write scan results to ~/.permi/exports/ and return the absolute path.
 
+    Location logic:
+      - Absolute path given → use as-is (parent dirs created if needed)
+      - Relative path given → placed inside ~/.permi/exports/
+        e.g. results.md      → ~/.permi/exports/results.md
+             reports/scan.md → ~/.permi/exports/reports/scan.md
+
+    Format inferred from extension: .json, .md, anything else → .txt
+    """
+    fmt   = _detect_format(filepath)
     given = Path(filepath)
 
     if given.is_absolute():
         path = given
     else:
-        path = get_export_dir() / given.name
+        path = get_export_dir() / given
 
-    # (your actual file writing logic goes here)
+    
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    return str(path)   # <-- THIS LINE fixes the "None" output
+    # Generate content
+    if fmt == "json":
+        content = _to_json(findings, raw_count, scan_target, info)
+    elif fmt == "markdown":
+        content = _to_markdown(findings, raw_count, scan_target, info)
+    else:
+        content = _to_text(findings, raw_count, scan_target, info)
+
+    
+    path.write_text(content, encoding="utf-8")
+
+    return str(path.resolve())

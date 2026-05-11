@@ -4,3 +4,5 @@ click
 requests
 httpx
 beautifulsoup4
+playwright
+playwright-stealth
