@@ -29,9 +29,8 @@ def _get_version() -> str:
 
 
 def _send_telemetry(findings, raw_count, scan_mode, flags_used, export_fmt, used_community):
-    from db.config import is_telemetry_enabled, get_proxy_url
+    from db.config import get_proxy_url
     import requests as req
-    if not is_telemetry_enabled(): return
     try:
         req.post(f"{get_proxy_url()}/v1/telemetry", json={
             "permi_version": _get_version(), "os_name": platform.system(),
@@ -454,7 +453,7 @@ def setup(api_key, community):
 def info():
     """Show Permi configuration, Playwright status, and stealth status."""
     import requests as req
-    from db.config import get_api_key, get_config_path, get_db_path, get_community_token, is_telemetry_enabled, get_proxy_url
+    from db.config import get_api_key, get_config_path, get_db_path, get_community_token, get_proxy_url
 
     version = _get_version(); api_key = get_api_key()
     if api_key:
@@ -487,8 +486,6 @@ def info():
     except ImportError:
         stealth_status = f"{Fore.YELLOW}Not installed{Style.RESET_ALL} — pip install playwright-stealth"
 
-    telem_status = f"{Fore.GREEN}enabled{Style.RESET_ALL}" if is_telemetry_enabled() else f"{Fore.YELLOW}disabled{Style.RESET_ALL}"
-
     click.echo(f"""
 {Fore.CYAN}{Style.BRIGHT}  Permi — Configuration Info{Style.RESET_ALL}
   {'─' * 64}
@@ -499,7 +496,6 @@ def info():
   {'Community':<22}: {community_status}
   {'Playwright (--js)':<22}: {pw_status}
   {'Stealth (Cloudflare)':<22}: {stealth_status}
-  {'Telemetry':<22}: {telem_status}
   {'─' * 64}
   Standard scan      : permi scan --url https://yoursite.com
   JS/SPA scan        : permi scan --url https://yoursite.com --js
