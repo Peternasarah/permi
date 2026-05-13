@@ -1,0 +1,20 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  permi-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Peternasarah/permi-action@v1
+        with:
+          severity: high
+          openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}

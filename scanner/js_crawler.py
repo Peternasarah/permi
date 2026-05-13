@@ -1,6 +1,31 @@
-# scanner/js_crawler.py
+# scanner/js_crawler.py  — v0.3
 #
-
+# THREE CHANGES IN THIS VERSION:
+#
+# CHANGE 1 — STEALTH MODE (fixes Cloudflare / bot-detection timeout)
+# ─────────────────────────────────────────────────────────────────────
+# INSTALL:  pip install playwright-stealth
+# What:     Patches headless Chromium to look like a real browser.
+#           Without this, Cloudflare detects navigator.webdriver=true
+#           and serves a JS challenge that never resolves → timeout.
+# Where:    _async_crawl() — after context is created, applied to every page
+# API note: playwright-stealth v2 uses Stealth().apply_stealth_async(page)
+#           NOT stealth_async(page) which was the v1 API.
+#
+# CHANGE 2 — STATIC FALLBACK on page timeout
+# ─────────────────────────────────────────────────────────────────────
+# What:     When Playwright times out, use httpx + BeautifulSoup to fetch
+#           raw HTML and extract links/forms. User gets partial results
+#           instead of zero. hellboundhackers.org will now at minimum
+#           return its static links even if JS rendering fails.
+# Where:    _async_crawl() — inside except PWTimeout block
+#
+# CHANGE 3 — CONFIGURABLE PAGE TIMEOUT (--js-timeout CLI flag)
+# ─────────────────────────────────────────────────────────────────────
+# What:     page_timeout_ms now comes from --js-timeout (seconds).
+#           Default 20s. Cloudflare sites need 45-60s. Heroku needs 25s.
+# Where:    JSCrawler.__init__() → _async_crawl() → page.goto(timeout=)
+#           main.py wires --js-timeout × 1000 to JSCrawler(page_timeout_ms=)
 
 from __future__ import annotations
 
@@ -393,21 +418,68 @@ class JSCrawler:
         page_timeout_ms    = self.page_timeout_ms
         max_seconds        = self.max_minutes * 60
 
+        # ── FIX 1: PRE-CHECK — confirm target is reachable before launching
+        # Chromium. If the site is down, report immediately instead of
+        # wasting 5+ minutes waiting for a browser that can never connect.
+        # ─────────────────────────────────────────────────────────────────
+        print(f"[Permi JS] Checking target reachability...")
+        try:
+            import httpx as _httpx
+            _probe = _httpx.get(
+                base_url,
+                timeout          = 10,
+                follow_redirects = True,
+                verify           = False,
+                headers          = {"User-Agent": "Mozilla/5.0"},
+            )
+            print(f"[Permi JS] Target reachable — HTTP {_probe.status_code}")
+        except Exception as _e:
+            print(f"[Permi JS] ⚠️  Target unreachable: {type(_e).__name__}")
+            print(f"[Permi JS]    Cannot start JS scan — site may be offline.")
+            print(f"[Permi JS]    Tip: try again in a few minutes, or scan without --js")
+            print(f"[Permi JS]    Returning header findings only (collected before JS crawl).")
+            return [], [], True
+        # ─────────────────────────────────────────────────────────────────
+
         def _thread_target() -> Tuple[List[str], List[str]]:
-            # Fresh thread + fresh event loop — avoids Windows asyncio deadlock
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(
-                    _async_crawl(
-                        base_url           = base_url,
-                        max_pages          = max_pages,
-                        include_subdomains = include_subdomains,
-                        page_timeout_ms    = page_timeout_ms,
+            # Fresh thread + fresh event loop — avoids Windows asyncio deadlock.
+            # FIX 2: thread marked as daemon=True so Python does NOT wait 300s
+            # for it to finish when the hard cap fires — eliminates the
+            # "RuntimeWarning: executor did not finish joining" message.
+            import threading
+            result_holder = [None]
+            error_holder  = [None]
+
+            def _run():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    result_holder[0] = loop.run_until_complete(
+                        _async_crawl(
+                            base_url           = base_url,
+                            max_pages          = max_pages,
+                            include_subdomains = include_subdomains,
+                            page_timeout_ms    = page_timeout_ms,
+                        )
                     )
-                )
-            finally:
-                loop.close()
+                except Exception as exc:
+                    error_holder[0] = exc
+                finally:
+                    loop.close()
+
+            t = threading.Thread(target=_run, daemon=True)  # FIX 2: daemon=True
+            t.start()
+            t.join(timeout=max_seconds)  # block until done or hard cap
+
+            if t.is_alive():
+                # Hard cap reached — thread is still running but we stop waiting.
+                # daemon=True means Python will not print the RuntimeWarning.
+                raise TimeoutError(f"JS crawl exceeded {max_seconds}s hard cap")
+
+            if error_holder[0]:
+                raise error_holder[0]
+
+            return result_holder[0]
 
         stealth_note = (
             " + stealth active ✓"
@@ -425,15 +497,16 @@ class JSCrawler:
         loop = asyncio.get_event_loop()
 
         try:
-            unique, api_endpoints = await asyncio.wait_for(
-                loop.run_in_executor(None, _thread_target),
-                timeout = max_seconds,
-            )
+            result = await loop.run_in_executor(None, _thread_target)
+            if result is None:
+                return [], [], True
+            unique, api_endpoints = result
             return unique, api_endpoints, True
 
-        except asyncio.TimeoutError:
-            print(f"\n[Permi JS] ⚠️  Hard cap reached ({self.max_minutes} min). Continuing with partial results.")
-            print(f"[Permi JS]    Reduce pages with --max-pages 5 to scan faster.")
+        except TimeoutError:
+            print(f"\n[Permi JS] ⚠️  Hard cap reached ({self.max_minutes} min).")
+            print(f"[Permi JS]    Continuing with header findings collected so far.")
+            print(f"[Permi JS]    Try --max-pages 5 to scan faster next time.")
             return [], [], True
 
         except Exception as e:
