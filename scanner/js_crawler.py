@@ -1,31 +1,5 @@
-# scanner/js_crawler.py  — v0.3
-#
-# THREE CHANGES IN THIS VERSION:
-#
-# CHANGE 1 — STEALTH MODE (fixes Cloudflare / bot-detection timeout)
-# ─────────────────────────────────────────────────────────────────────
-# INSTALL:  pip install playwright-stealth
-# What:     Patches headless Chromium to look like a real browser.
-#           Without this, Cloudflare detects navigator.webdriver=true
-#           and serves a JS challenge that never resolves → timeout.
-# Where:    _async_crawl() — after context is created, applied to every page
-# API note: playwright-stealth v2 uses Stealth().apply_stealth_async(page)
-#           NOT stealth_async(page) which was the v1 API.
-#
-# CHANGE 2 — STATIC FALLBACK on page timeout
-# ─────────────────────────────────────────────────────────────────────
-# What:     When Playwright times out, use httpx + BeautifulSoup to fetch
-#           raw HTML and extract links/forms. User gets partial results
-#           instead of zero. hellboundhackers.org will now at minimum
-#           return its static links even if JS rendering fails.
-# Where:    _async_crawl() — inside except PWTimeout block
-#
-# CHANGE 3 — CONFIGURABLE PAGE TIMEOUT (--js-timeout CLI flag)
-# ─────────────────────────────────────────────────────────────────────
-# What:     page_timeout_ms now comes from --js-timeout (seconds).
-#           Default 20s. Cloudflare sites need 45-60s. Heroku needs 25s.
-# Where:    JSCrawler.__init__() → _async_crawl() → page.goto(timeout=)
-#           main.py wires --js-timeout × 1000 to JSCrawler(page_timeout_ms=)
+# scanner/js_crawler.py 
+
 
 from __future__ import annotations
 
@@ -107,7 +81,7 @@ def _form_to_url(action: str, inputs: List[Dict], base_url: str) -> Optional[str
     return f"{full_action}?{urlencode(params)}"
 
 
-# ── CHANGE 2: STATIC FALLBACK ─────────────────────────────────────────────────
+# ── STATIC FALLBACK ─────────────────────────────────────────────────
 def _static_fallback(
     url:               str,
     base_domain:       str,
@@ -178,15 +152,25 @@ async def _async_crawl(
     base_url:           str,
     max_pages:          int,
     include_subdomains: bool,
-    page_timeout_ms:    int,   # CHANGE 3: from --js-timeout
+    page_timeout_ms:    int,
+    stop_flag,                  # threading.Event — set when main thread moves on
 ) -> Tuple[List[str], List[str]]:
-
+    """
+    Core Playwright crawl. Runs inside its own thread (Windows deadlock fix).
+    Uses stop_flag to silence output once main thread has finished waiting.
+    This prevents JS crawler messages from appearing after the scan summary,
+    AI filter output, feedback prompt, and export message.
+    """
     from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
-    # CHANGE 1: stealth — graceful if not installed
+    def _p(msg: str):
+        """Print only if main thread is still waiting for us."""
+        if not stop_flag.is_set():
+            print(msg)
+
     try:
         from playwright_stealth import Stealth
-        _stealth    = Stealth()
+        _stealth     = Stealth()
         _has_stealth = True
     except ImportError:
         _stealth     = None
@@ -207,14 +191,10 @@ async def _async_crawl(
         browser = await pw.chromium.launch(
             headless = True,
             args     = [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-extensions",
-                "--disable-background-networking",
-                "--disable-default-apps",
-                "--memory-pressure-off",
+                "--no-sandbox", "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage", "--disable-gpu",
+                "--disable-extensions", "--disable-background-networking",
+                "--disable-default-apps", "--memory-pressure-off",
                 "--single-process",
             ],
         )
@@ -235,27 +215,28 @@ async def _async_crawl(
         )
 
         while to_visit and pages_crawled < max_pages:
+            # Stop crawling immediately if main thread moved on
+            if stop_flag.is_set():
+                break
+
             current_url = to_visit.pop(0)
             if current_url in visited:
                 continue
             visited.add(current_url)
             pages_crawled += 1
 
-            print(
+            _p(
                 f"[Permi JS] Rendering {pages_crawled}/{max_pages}: "
                 f"{current_url[:70]}{'...' if len(current_url) > 70 else ''}"
             )
 
             page = await context.new_page()
 
-            # CHANGE 1: apply stealth to every page
-            # patches navigator.webdriver, canvas, plugins → bypasses Cloudflare
             if _has_stealth:
                 await _stealth.apply_stealth_async(page)
 
-            # API endpoint interception
             async def on_request(request):
-                if request.resource_type in ("xhr","fetch"):
+                if request.resource_type in ("xhr", "fetch"):
                     req_url = request.url
                     p       = urlparse(req_url)
                     if _in_scope(req_url, base_domain, include_subdomains):
@@ -263,12 +244,11 @@ async def _async_crawl(
                             api_seen.add(p.path)
                             if p.query:
                                 api_endpoints.append(req_url)
-                                print(f"[Permi JS] API endpoint: {req_url[:65]}")
+                                _p(f"[Permi JS] API endpoint: {req_url[:65]}")
 
             page.on("request", on_request)
 
             try:
-                # CHANGE 3: page_timeout_ms from --js-timeout
                 await page.goto(
                     current_url,
                     wait_until = "domcontentloaded",
@@ -314,14 +294,15 @@ async def _async_crawl(
                         form_url = _form_to_url(form.get("action",""), form.get("inputs",[]), current_url)
                         if form_url:
                             discovered_urls.add(form_url)
-                            print(f"[Permi JS] Form discovered: {form_url[:65]}")
+                            _p(f"[Permi JS] Form discovered: {form_url[:65]}")
                 except Exception:
                     pass
 
                 # Search boxes
                 try:
                     search = await page.query_selector_all(
-                        "input[type='search'],input[placeholder*='search' i],input[name='q'],input[name='search']"
+                        "input[type='search'],input[placeholder*='search' i],"
+                        "input[name='q'],input[name='search']"
                     )
                     for inp in search[:1]:
                         try:
@@ -331,7 +312,7 @@ async def _async_crawl(
                             su = page.url
                             if "?" in su and su not in discovered_urls:
                                 discovered_urls.add(su)
-                                print(f"[Permi JS] Search URL: {su[:65]}")
+                                _p(f"[Permi JS] Search URL: {su[:65]}")
                             await page.go_back(timeout=5000)
                             await asyncio.sleep(0.5)
                         except Exception:
@@ -340,10 +321,9 @@ async def _async_crawl(
                     pass
 
             except PWTimeout:
-                # ── CHANGE 2: STATIC FALLBACK ─────────────────────────────────
                 js_timeouts += 1
                 timeout_secs = page_timeout_ms // 1000
-                print(f"[Permi JS] JS timeout ({timeout_secs}s) — trying static fallback...")
+                _p(f"[Permi JS] JS timeout ({timeout_secs}s) — trying static fallback...")
 
                 fallback_urls, fallback_forms = _static_fallback(
                     current_url, base_domain, include_subdomains
@@ -357,18 +337,17 @@ async def _async_crawl(
                     form_url = _form_to_url(form.get("action",""), form.get("inputs",[]), current_url)
                     if form_url:
                         discovered_urls.add(form_url)
-                        print(f"[Permi JS] Fallback form: {form_url[:65]}")
+                        _p(f"[Permi JS] Fallback form: {form_url[:65]}")
 
-                # Suggest higher timeout after 2 failures
                 if js_timeouts >= 2:
                     higher = timeout_secs + 15
-                    print(
+                    _p(
                         f"[Permi JS] Multiple timeouts. Try:"
                         f" permi scan --url {base_url} --js --js-timeout {higher}"
                     )
 
             except Exception as e:
-                print(f"[Permi JS] {type(e).__name__}: {current_url[:55]} — skipping")
+                _p(f"[Permi JS] {type(e).__name__}: {current_url[:55]} — skipping")
             finally:
                 try:
                     await page.close()
@@ -382,20 +361,28 @@ async def _async_crawl(
 
     unique = _dedup_urls(discovered_urls)
 
-    print()
-    print(
-        f"[Permi JS] Done — {pages_crawled} page(s) | "
-        f"{js_timeouts} JS timeout(s) with static fallback | "
-        f"{len(unique)} unique parameter signature(s) to test"
-    )
-    if not _has_stealth:
-        print("[Permi JS] Install playwright-stealth to bypass Cloudflare: pip install playwright-stealth")
+    # Only print the final Done summary if main thread is still listening
+    if not stop_flag.is_set():
+        print()
+        print(
+            f"[Permi JS] Done — {pages_crawled} page(s) | "
+            f"{js_timeouts} JS timeout(s) with static fallback | "
+            f"{len(unique)} unique parameter signature(s) to test"
+        )
+        if not _has_stealth:
+            print("[Permi JS] Install playwright-stealth: pip install playwright-stealth")
 
     return unique, api_endpoints
 
 
 # ── JSCrawler ─────────────────────────────────────────────────────────────────
 class JSCrawler:
+    """
+    Playwright SPA crawler.
+    Runs Playwright in a separate daemon thread to avoid Windows asyncio deadlock.
+    Uses stop_flag (threading.Event) to silence thread output once the main
+    scan thread moves on — prevents interleaved output with AI filter and summary.
+    """
 
     def __init__(
         self,
@@ -403,7 +390,7 @@ class JSCrawler:
         max_pages:          int  = 15,
         include_subdomains: bool = False,
         max_minutes:        int  = 5,
-        page_timeout_ms:    int  = 20000,  # CHANGE 3: set by --js-timeout × 1000
+        page_timeout_ms:    int  = 20000,
     ):
         self.base_url           = base_url
         self.max_pages          = max_pages
@@ -412,16 +399,15 @@ class JSCrawler:
         self.page_timeout_ms    = page_timeout_ms
 
     async def crawl(self) -> Tuple[List[str], List[str], bool]:
+        import threading
+
         base_url           = self.base_url
         max_pages          = self.max_pages
         include_subdomains = self.include_subdomains
         page_timeout_ms    = self.page_timeout_ms
         max_seconds        = self.max_minutes * 60
 
-        # ── FIX 1: PRE-CHECK — confirm target is reachable before launching
-        # Chromium. If the site is down, report immediately instead of
-        # wasting 5+ minutes waiting for a browser that can never connect.
-        # ─────────────────────────────────────────────────────────────────
+        # ── PRE-CHECK: confirm target is reachable before launching Chromium ──
         print(f"[Permi JS] Checking target reachability...")
         try:
             import httpx as _httpx
@@ -437,54 +423,41 @@ class JSCrawler:
             print(f"[Permi JS] ⚠️  Target unreachable: {type(_e).__name__}")
             print(f"[Permi JS]    Cannot start JS scan — site may be offline.")
             print(f"[Permi JS]    Tip: try again in a few minutes, or scan without --js")
-            print(f"[Permi JS]    Returning header findings only (collected before JS crawl).")
+            print(f"[Permi JS]    Returning header findings only.")
             return [], [], True
-        # ─────────────────────────────────────────────────────────────────
+        # ──────────────────────────────────────────────────────────────────────
 
-        def _thread_target() -> Tuple[List[str], List[str]]:
-            # Fresh thread + fresh event loop — avoids Windows asyncio deadlock.
-            # FIX 2: thread marked as daemon=True so Python does NOT wait 300s
-            # for it to finish when the hard cap fires — eliminates the
-            # "RuntimeWarning: executor did not finish joining" message.
-            import threading
-            result_holder = [None]
-            error_holder  = [None]
+        # stop_flag: set() by crawl() when it stops waiting for the thread.
+        # The thread checks this before every print() call so output stops
+        # cleanly the moment the main scan moves to AI filter / summary.
+        stop_flag = threading.Event()
 
-            def _run():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    result_holder[0] = loop.run_until_complete(
-                        _async_crawl(
-                            base_url           = base_url,
-                            max_pages          = max_pages,
-                            include_subdomains = include_subdomains,
-                            page_timeout_ms    = page_timeout_ms,
-                        )
+        result_holder = [None]
+        error_holder  = [None]
+
+        def _run():
+            """Runs in a fresh daemon thread with its own event loop."""
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result_holder[0] = loop.run_until_complete(
+                    _async_crawl(
+                        base_url           = base_url,
+                        max_pages          = max_pages,
+                        include_subdomains = include_subdomains,
+                        page_timeout_ms    = page_timeout_ms,
+                        stop_flag          = stop_flag,
                     )
-                except Exception as exc:
-                    error_holder[0] = exc
-                finally:
-                    loop.close()
-
-            t = threading.Thread(target=_run, daemon=True)  # FIX 2: daemon=True
-            t.start()
-            t.join(timeout=max_seconds)  # block until done or hard cap
-
-            if t.is_alive():
-                # Hard cap reached — thread is still running but we stop waiting.
-                # daemon=True means Python will not print the RuntimeWarning.
-                raise TimeoutError(f"JS crawl exceeded {max_seconds}s hard cap")
-
-            if error_holder[0]:
-                raise error_holder[0]
-
-            return result_holder[0]
+                )
+            except Exception as exc:
+                error_holder[0] = exc
+            finally:
+                loop.close()
 
         stealth_note = (
             " + stealth active ✓"
             if stealth_available()
-            else " (no stealth — install playwright-stealth for Cloudflare bypass)"
+            else " (no stealth — pip install playwright-stealth for Cloudflare bypass)"
         )
         print(f"[Permi JS] Starting headless Chromium{stealth_note}")
         print(
@@ -494,25 +467,31 @@ class JSCrawler:
         )
         print()
 
-        loop = asyncio.get_event_loop()
+        # daemon=True: Python won't wait 300s for the thread on shutdown
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        t.join(timeout=max_seconds)
 
-        try:
-            result = await loop.run_in_executor(None, _thread_target)
-            if result is None:
-                return [], [], True
-            unique, api_endpoints = result
-            return unique, api_endpoints, True
+        # Signal the thread to stop printing — whether it finished or timed out
+        stop_flag.set()
 
-        except TimeoutError:
+        if t.is_alive():
+            # Hard cap reached — thread still running but we move on
             print(f"\n[Permi JS] ⚠️  Hard cap reached ({self.max_minutes} min).")
             print(f"[Permi JS]    Continuing with header findings collected so far.")
             print(f"[Permi JS]    Try --max-pages 5 to scan faster next time.")
             return [], [], True
 
-        except Exception as e:
-            print(f"\n[Permi JS] Browser error: {type(e).__name__}: {e}")
+        if error_holder[0]:
+            print(f"\n[Permi JS] Browser error: {type(error_holder[0]).__name__}: {error_holder[0]}")
             print("[Permi JS]    Continuing with header findings only.")
             return [], [], True
+
+        if result_holder[0] is None:
+            return [], [], True
+
+        unique, api_endpoints = result_holder[0]
+        return unique, api_endpoints, True
 
 
 # ── INSTALL GUIDES ────────────────────────────────────────────────────────────
@@ -531,11 +510,11 @@ def print_install_guide():
     pip install playwright-stealth
 
 {Fore.WHITE}  Step 4 — Re-run:{Style.RESET_ALL}
-    permi scan --url {"{target}"} --js
+    permi scan --url {{target}} --js
 
 {Fore.CYAN}  Tips:{Style.RESET_ALL}
-    4GB RAM machine  → use --max-pages 10
-    Cloudflare site  → use --js-timeout 45
+    4GB RAM machine   → use --max-pages 10
+    Cloudflare site   → use --js-timeout 45
     Heroku (sleeping) → use --js-timeout 30
 """)
 
