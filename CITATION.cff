@@ -5,17 +5,20 @@ cff-version: 1.2.0
 title: "Permi"
 
 abstract: >
-  Permi is an open-source, AI-powered static vulnerability scanner for
-  developers and SMBs. It detects common security vulnerabilities — including
-  SQL injection, cross-site scripting, hardcoded secrets, and insecure
-  practices — using a regex-based rule engine, and applies a large language
-  model filter to reduce false positives. Permi includes vulnerability rules
-  specific to the Nigerian development context, including USSD gateway
-  misconfigurations and local payment gateway credential exposure. It runs
-  entirely locally with no cloud backend required, storing results in a local
-  SQLite database. Permi is distributed as a Python CLI package via PyPI and
-  is designed to be accessible to developers in emerging markets who are
-  underserved by expensive, enterprise-focused security tooling.
+  Permi is an open-source security signal filter for African fintech
+  engineering teams. It scans source code and live web applications for
+  security vulnerabilities — including SQL injection, cross-site scripting,
+  hardcoded secrets, and insecure practices — then uses an AI filter to remove
+  false positives so developers only see findings that actually matter.
+  Permi includes rules built specifically for the Nigerian development context:
+  USSD gateway misconfigurations, Paystack and Flutterwave credential exposure,
+  and patterns relevant to Nigeria Data Protection Act (NDPA) compliance.
+  It runs entirely locally with no mandatory cloud backend, storing results in
+  a local SQLite database. Permi is distributed as a Python CLI package via
+  PyPI and as a GitHub Action on the GitHub Marketplace. It is designed to be
+  the default security workflow tool for African fintech engineering teams —
+  the layer between a developer's code editor and their regulatory obligations
+  that no foreign tool currently occupies.
 
 # ── Authorship ────────────────────────────────────────────────────────────────
 
@@ -30,14 +33,14 @@ authors:
 
 # ── Version and dates ─────────────────────────────────────────────────────────
 
-version: "0.2.13"
-date-released: "2026-04-18"
+version: "0.2.17"
+date-released: "2026-05-19"
 
 # ── Repository and distribution ───────────────────────────────────────────────
 
 repository-code: "https://github.com/peternasarah/permi"
 url: "https://pypi.org/project/permi/"
-repository-artifact: "https://pypi.org/project/permi/0.2.13/"
+repository-artifact: "https://pypi.org/project/permi/0.2.17/"
 
 # ── License ───────────────────────────────────────────────────────────────────
 
@@ -51,18 +54,26 @@ keywords:
   - vulnerability-scanner
   - static-analysis
   - SAST
-  - AI
+  - DAST
   - false-positive-filter
+  - precision-security
   - SQL-injection
   - XSS
   - secrets-detection
   - USSD
+  - NDPA
+  - NDPR
   - Nigeria
+  - Africa
+  - fintech
   - cybersecurity
   - developer-tools
   - CLI
   - Python
+  - GitHub-Action
   - open-source
+  - appsec
+  - devsecops
 
 # ── Classification ────────────────────────────────────────────────────────────
 
@@ -74,19 +85,20 @@ type: software
 # or a published project, please cite it using the format below.
 #
 # APA:
-#   Dashe, N. P. (2026). Permi (Version 0.2.13) [Software].
+#   Dashe, N. P. (2026). Permi (Version 0.2.17) [Software].
 #   University of Jos, Nigeria. https://github.com/peternasarah/permi
 #
 # BibTeX:
 #   @software{dashe2026permi,
 #     author    = {Dashe, Nasarah Peter},
 #     title     = {Permi},
-#     version   = {0.2.13},
+#     version   = {0.2.17},
 #     year      = {2026},
 #     publisher = {GitHub},
 #     url       = {https://github.com/peternasarah/permi},
-#     note      = {AI-powered vulnerability scanner for Nigerian developers
-#                  and global SMBs}
+#     note      = {Security signal filter for African fintech engineering teams.
+#                  Precision-first AppSec with AI false-positive removal,
+#                  NDPA compliance rules, and USSD vulnerability detection.}
 #   }
 
 # ── References ────────────────────────────────────────────────────────────────
@@ -100,11 +112,18 @@ references:
     year: 2021
 
   - type: standard
-    title: "Nigeria Data Protection Regulation (NDPR)"
+    title: "Nigeria Data Protection Act (NDPA) 2023"
     authors:
       - name: "National Information Technology Development Agency (NITDA)"
     url: "https://nitda.gov.ng/ndpr/"
-    year: 2019
+    year: 2023
+
+  - type: standard
+    title: "Central Bank of Nigeria (CBN) Cybersecurity Assessment Framework"
+    authors:
+      - name: "Central Bank of Nigeria"
+    url: "https://www.cbn.gov.ng"
+    year: 2022
 
   - type: software
     title: "OpenRouter"
@@ -120,3 +139,8 @@ references:
     title: "DeepSeek V3"
     abstract: "Large language model used via OpenRouter for AI-powered false-positive filtering"
     url: "https://openrouter.ai/deepseek/deepseek-chat"
+
+  - type: software
+    title: "Playwright"
+    abstract: "Headless browser automation library used for JavaScript-rendered site scanning"
+    url: "https://playwright.dev"

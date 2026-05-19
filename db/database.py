@@ -3,7 +3,11 @@
 #
 # Database location: ~/.permi/permi.db
 # This works correctly whether Permi was installed via pip or run from source.
-# The ~/.permi directory is created automatically on first run.
+# The ~/.permi directory is created automatically on first use.
+#
+# FIX v0.2.17: DB_PATH is now computed lazily via get_db_path().
+# Previously it was computed at module-level which caused Windows machines
+# with Defender/antivirus to freeze on import — before the banner even appeared.
 
 import sqlite3
 from pathlib import Path
@@ -23,8 +27,39 @@ def get_permi_dir() -> Path:
     return permi_dir
 
 
-# The database always lives in ~/.permi/permi.db
-DB_PATH = get_permi_dir() / "permi.db"
+# ── Lazy path resolution ──────────────────────────────────────────────────────
+# Never compute these at module load time — that triggers filesystem access
+# on import, which causes Windows Defender to freeze the process before
+# any CLI output appears.
+_DB_PATH:     Path | None = None
+_CONFIG_PATH: Path | None = None
+
+
+def get_db_path() -> Path:
+    """Return the database path, computing it on first call only."""
+    global _DB_PATH
+    if _DB_PATH is None:
+        _DB_PATH = get_permi_dir() / "permi.db"
+    return _DB_PATH
+
+
+# Keep DB_PATH as a module-level property for backward compatibility
+# with any code that imports it directly. It now resolves lazily.
+class _LazyPath:
+    """Proxy that resolves the path only when first accessed."""
+    def __truediv__(self, other):  return get_db_path() / other
+    def __str__(self):             return str(get_db_path())
+    def __repr__(self):            return repr(get_db_path())
+    def __fspath__(self):          return str(get_db_path())
+    def __eq__(self, other):       return get_db_path() == other
+    def exists(self):              return get_db_path().exists()
+    @property
+    def name(self):                return get_db_path().name
+    @property
+    def parent(self):              return get_db_path().parent
+
+
+DB_PATH = _LazyPath()
 
 
 def get_connection() -> sqlite3.Connection:
@@ -32,7 +67,7 @@ def get_connection() -> sqlite3.Connection:
     Open and return a connection to the local SQLite database.
     Sets row_factory so rows behave like dictionaries.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(get_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn

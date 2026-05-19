@@ -7,17 +7,39 @@
 #   3. .env file in current directory            — for developers running from source
 #   4. Community proxy token                     — set by: permi setup --community
 #   5. Nothing found                             — offline mode with clear message
+#
+# FIX v0.2.17: CONFIG_FILE is now computed lazily.
+# Previously it ran get_permi_dir() at module level which triggered
+# filesystem access at import time — causing Windows Defender to freeze.
 
 from __future__ import annotations
 
 import os
 import json
 from pathlib import Path
-from db.database import get_permi_dir, DB_PATH
 
-CONFIG_FILE  = get_permi_dir() / "config.json"
-PROXY_URL    = "https://permi-proxy.onrender.com"
+PROXY_URL = "https://permi-proxy.onrender.com"
 
+# ── Lazy path resolution ──────────────────────────────────────────────────────
+_CONFIG_FILE: Path | None = None
+
+
+def get_config_path() -> Path:
+    """Return the config file path, computing it on first call only."""
+    global _CONFIG_FILE
+    if _CONFIG_FILE is None:
+        from db.database import get_permi_dir
+        _CONFIG_FILE = get_permi_dir() / "config.json"
+    return _CONFIG_FILE
+
+
+def get_db_path() -> Path:
+    """Return the database path."""
+    from db.database import get_db_path as _get_db_path
+    return _get_db_path()
+
+
+# ── API key ───────────────────────────────────────────────────────────────────
 
 def get_api_key() -> str | None:
     """Return the OpenRouter API key using the priority chain."""
@@ -27,9 +49,10 @@ def get_api_key() -> str | None:
         return key.strip()
 
     # 2. ~/.permi/config.json
-    if CONFIG_FILE.exists():
+    cfg = get_config_path()
+    if cfg.exists():
         try:
-            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            data = json.loads(cfg.read_text(encoding="utf-8"))
             key  = data.get("openrouter_api_key", "")
             if key and key.strip():
                 return key.strip()
@@ -53,9 +76,10 @@ def get_api_key() -> str | None:
 
 def get_community_token() -> str | None:
     """Return the community proxy token if configured."""
-    if CONFIG_FILE.exists():
+    cfg = get_config_path()
+    if cfg.exists():
         try:
-            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            data  = json.loads(cfg.read_text(encoding="utf-8"))
             token = data.get("community_token", "")
             if token and token.strip():
                 return token.strip()
@@ -68,8 +92,7 @@ def save_api_key(api_key: str) -> None:
     """Save OpenRouter API key to ~/.permi/config.json."""
     data = _load_config()
     data["openrouter_api_key"] = api_key.strip()
-    # Remove community token when switching to personal key
-    data.pop("community_token", None)
+    data.pop("community_token", None)  # remove community token when using personal key
     _save_config(data)
 
 
@@ -77,8 +100,7 @@ def save_community_token(token: str) -> None:
     """Save community proxy token to ~/.permi/config.json."""
     data = _load_config()
     data["community_token"] = token.strip()
-    # Remove personal key when switching to community
-    data.pop("openrouter_api_key", None)
+    data.pop("openrouter_api_key", None)  # remove personal key when using community
     _save_config(data)
 
 
@@ -87,22 +109,17 @@ def get_proxy_url() -> str:
     return os.environ.get("PERMI_PROXY_URL", PROXY_URL)
 
 
-def get_config_path() -> Path:
-    return CONFIG_FILE
-
-
-def get_db_path() -> Path:
-    return DB_PATH
-
+# ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _load_config() -> dict:
-    if CONFIG_FILE.exists():
+    cfg = get_config_path()
+    if cfg.exists():
         try:
-            return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            return json.loads(cfg.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
     return {}
 
 
 def _save_config(data: dict) -> None:
-    CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    get_config_path().write_text(json.dumps(data, indent=2), encoding="utf-8")

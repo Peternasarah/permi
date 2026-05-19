@@ -1,9 +1,12 @@
 # Contributing to Permi
 
 Thank you for considering a contribution to Permi. This project exists to give
-Nigerian developers and global SMBs a security tool that actually understands
-their context. Every contribution — code, documentation, bug report, or new
-vulnerability rule — moves that mission forward.
+African fintech engineering teams a security tool that actually understands
+their context — finding real vulnerabilities and filtering out the noise that
+causes developers to stop trusting their scanner.
+
+Every contribution — code, documentation, bug report, or new vulnerability
+rule — moves that mission forward.
 
 ---
 
@@ -24,9 +27,9 @@ vulnerability rule — moves that mission forward.
 
 ## Before You Start
 
-- Read the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). It is short and important.
-- Check [open issues](https://github.com/peternasarah/permi/issues) before starting
-  work — someone may already be building what you have in mind.
+- Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). It is short and important.
+- Check [open issues](https://github.com/peternasarah/permi/issues) before
+  starting work — someone may already be building what you have in mind.
 - For significant changes (new features, architectural changes), open an issue
   first and describe what you intend to build. This saves you time if the
   direction does not fit the project's roadmap.
@@ -42,7 +45,7 @@ vulnerability rule — moves that mission forward.
 | Type | Examples |
 |------|----------|
 | **Bug reports** | Scanner misses a real vulnerability, AI filter gives wrong verdict, CLI crashes |
-| **New vulnerability rules** | Patterns specific to Nigerian tech stacks, new OWASP findings |
+| **New vulnerability rules** | Patterns specific to Nigerian/African tech stacks, new OWASP findings |
 | **Documentation** | Clearer README, better examples, translated docs |
 | **Testing** | Run Permi on your own projects and report what it misses or misidentifies |
 | **Security research** | Responsible disclosure of vulnerabilities in Permi itself (see SECURITY.md) |
@@ -62,7 +65,7 @@ vulnerability rule — moves that mission forward.
 
 ```bash
 # 1. Fork the repository on GitHub, then clone your fork
-git clone https://github.com/peternasarahE/permi.git
+git clone https://github.com/peternasarah/permi.git
 cd permi
 
 # 2. Create a virtual environment
@@ -76,7 +79,6 @@ source venv/bin/activate
 
 # 4. Install in editable mode with all dependencies
 pip install -e .
-pip install -r requirements.txt
 
 # 5. Add your OpenRouter API key
 echo OPENROUTER_API_KEY=your-key-here > .env
@@ -87,6 +89,13 @@ permi scan --path ./test_project --offline
 
 You should see Permi scan the test project and print findings. If it does,
 your development environment is ready.
+
+### Optional — JavaScript scanning
+
+```bash
+pip install playwright playwright-stealth
+playwright install chromium
+```
 
 ---
 
@@ -105,7 +114,7 @@ Click "Fork" on GitHub. Work on your fork, not the main repository.
 Name your branch clearly:
 ```bash
 git checkout -b fix/sql-rule-false-positive
-git checkout -b feature/ndpr-compliance-check
+git checkout -b feature/ndpa-compliance-check
 git checkout -b docs/improve-readme
 ```
 
@@ -117,11 +126,11 @@ Keep changes focused. One branch = one logical change.
 # Run a scan against the test project
 permi scan --path ./test_project
 
-# Run a scan in offline mode (no API calls)
+# Run in offline mode (no API calls)
 permi scan --path ./test_project --offline
 
-# If you added new rules, add a test case to test_project/ that triggers them
-# and verify they are caught
+# If you added new rules, add a test case to test_project/
+# that triggers them and verify they are caught
 ```
 
 **5. Commit with a clear message** (see format below)
@@ -138,6 +147,10 @@ Then open a pull request on GitHub against the `main` branch.
 
 New rules are the most valuable contribution you can make to Permi. Each rule
 added to `scanner/rules.py` extends what every Permi user can detect.
+
+Permi's competitive advantage is precision and context. A rule that fires on
+10 findings and is right 9 times is more valuable than a rule that fires on
+100 findings and is right 30 times.
 
 ### Rule structure
 
@@ -158,6 +171,15 @@ added to `scanner/rules.py` extends what every Permi user can detect.
 }
 ```
 
+And add a corresponding fix template to `FIX_TEMPLATES` in `scanner/rules.py`:
+
+```python
+"XYZ001": (
+    "How to fix this. Concrete code example preferred. "
+    "Under 200 characters."
+),
+```
+
 ### Rule ID prefixes
 
 | Prefix | Category |
@@ -168,10 +190,9 @@ added to `scanner/rules.py` extends what every Permi user can detect.
 | `INS`  | Insecure Practices |
 | `USSD` | USSD / Nigerian-specific |
 | `API`  | API Security |
-| `NDPR` | NDPR Compliance |
+| `NDPA` | NDPA Compliance *(Pro tier — see roadmap)* |
+| `CBN`  | CBN CSAT compliance *(Pro tier)* |
 | `MOB`  | Mobile Security |
-
-Use the next available number in the relevant prefix series.
 
 ### Rule quality checklist
 
@@ -180,22 +201,26 @@ Before submitting a new rule, verify:
 - [ ] The pattern catches the vulnerability it targets on a real code example
 - [ ] The pattern does not fire on obviously safe code (low false positive rate)
 - [ ] The `description` explains both the risk and the attacker's ability
+- [ ] A `FIX_TEMPLATE` entry exists with a concrete remediation example
 - [ ] The `severity` is appropriate:
-  - `high` — exploitable directly, leads to data loss, code execution, or
-    credential exposure
+  - `high` — exploitable directly, leads to data loss, code execution, or credential exposure
   - `medium` — exploitable under certain conditions, or increases attack surface
   - `low` — informational, best practice violation, minor exposure
 - [ ] A test case exists in `test_project/` that triggers the rule
 
-### Nigerian-specific rules
+### African/Nigerian-specific rules — highest priority
 
-Permi's competitive advantage is context. Rules that address:
+Permi's strongest differentiator is context. Rules that address the following
+are especially valuable and will be prioritised for review:
+
 - USSD gateway vulnerabilities
+- Paystack / Flutterwave / Monnify / Opay credential exposure
+- BVN / NIN pattern exposure (NDPA-sensitive)
 - Mobile money API misconfigurations
-- NDPR compliance gaps
-- Local payment gateway (Paystack, Flutterwave) credential exposure
+- Weak callback endpoint validation
 
-...are especially valuable and will be prioritised for review.
+These are patterns that Semgrep, Snyk, and GitHub Advanced Security will never
+prioritise for their global ruleset. They are Permi's moat.
 
 ---
 
@@ -206,14 +231,12 @@ Permi's competitive advantage is context. Rules that address:
 - **Type hints:** Use them on all function signatures
 - **Comments:** Explain *why*, not *what*. The code shows what — comments
   explain the reasoning behind non-obvious decisions.
-- **No external formatting tools are required** — but your code should be
-  readable without them.
+- **Imports:** All heavy imports (scanner, db, ai_filter) must stay inside
+  functions, not at module level. This prevents Windows Defender freeze on startup.
 
 ---
 
 ## Commit Message Format
-
-Use this format for all commits:
 
 ```
 type(scope): short description
@@ -236,9 +259,9 @@ Optional longer explanation if the change is not self-evident.
 
 ```
 feat(rules): add Paystack secret key detection rule SEC004
-fix(engine): skip binary files that cause UnicodeDecodeError
-docs(readme): add offline mode usage example
-refactor(filter): extract verdict parsing into separate function
+fix(web_scanner): skip tracking params to reduce XSS false positives
+docs(readme): add Windows Defender freeze fix instructions
+refactor(db): make DB_PATH lazy to fix Windows startup freeze
 ```
 
 ---
@@ -249,24 +272,17 @@ A good pull request:
 
 - **Has a clear title** using the same format as commit messages
 - **Describes what changed and why** — not just what the code does
-- **Is focused** — one logical change per PR. Large PRs are harder to review
-  and slower to merge.
+- **Is focused** — one logical change per PR
 - **Includes a test** — if you added a rule, add a code example to
   `test_project/` that triggers it
-- **Does not break existing behaviour** — run `permi scan --path ./test_project
-  --offline` and confirm the same findings appear
-
-### PR description template
-
-When you open a pull request, a template will appear automatically.
-Fill it in completely — PRs without descriptions take longer to review.
+- **Does not break existing behaviour** — run
+  `permi scan --path ./test_project --offline` and confirm findings appear
 
 ---
 
 ## What Gets Accepted
 
-Permi has a focused scope. The following will generally be accepted:
-
+**Will generally be accepted:**
 - Bug fixes
 - New vulnerability rules with low false positive rates
 - Nigerian / African market-specific security checks
@@ -274,20 +290,19 @@ Permi has a focused scope. The following will generally be accepted:
 - Performance improvements to the scanner engine
 - Improved AI prompts that reduce false positives
 
-The following require prior discussion before work begins:
-
+**Require prior discussion:**
 - New CLI commands or flags
 - Changes to the database schema
 - New external dependencies
 - Architectural changes to the scanner pipeline
 
-The following will not be accepted:
-
-- Rules with very high false positive rates that the AI filter cannot
-  reliably clean up
+**Will not be accepted:**
+- Rules with very high false positive rates
 - Dependencies that cannot run offline
 - Changes that break the `--offline` flag
+- Module-level imports that trigger filesystem access at startup
 - Code that phones home, collects analytics, or makes unexpected network calls
+  without explicit user consent
 
 ---
 
@@ -295,17 +310,14 @@ The following will not be accepted:
 
 By submitting a contribution, you agree that it will be licensed under the
 [Permi Community License](LICENSE). You retain copyright of your own
-contributions, but grant Permi the rights described in Part 4 of the license.
-
-If you are contributing on behalf of an employer, ensure you have the right
-to make the contribution before submitting.
+contributions, but grant Permi the rights described in the license.
 
 ---
 
 ## Questions?
 
-Open a [GitHub Discussion](https://github.com/peternasarah/permi/discussions) or
-reach out on Twitter: [@pndash](https://twitter.com/peternasarah)
+Open a [GitHub Discussion](https://github.com/peternasarah/permi/discussions)
+or reach out: [@peternasarah](https://twitter.com/peternasarah)
 
 Thank you for contributing to Permi.
 

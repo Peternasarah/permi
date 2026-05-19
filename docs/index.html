@@ -3,446 +3,211 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Permi — AI-powered vulnerability scanner for Nigerian developers and global SMBs. Scan live websites and source code. Free to install." />
-  <meta property="og:title" content="Permi — AI Security Scanner for Nigerian Developers" />
-  <meta property="og:description" content="Scan live websites and source code for vulnerabilities. AI filters out the noise. Free and open source." />
+  <meta name="description" content="Permi — the security signal filter for African fintech engineering teams. Precision-first AppSec that removes false positives so developers only see findings that matter." />
+  <meta property="og:title" content="Permi — Security Signal Filter for African Fintech Teams" />
+  <meta property="og:description" content="Finds real vulnerabilities in your code and live applications. AI removes the noise. Nigerian-specific rules no foreign scanner will ever write." />
   <meta property="og:url" content="https://peternasarah.github.io/permi" />
-  <title>Permi — AI Security Scanner</title>
+  <title>Permi — Security Signal Filter for African Fintech Teams</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #0d1117;
-      --surface:   #161b22;
-      --border:    #30363d;
-      --blue:      #2f81f7;
-      --green:     #3fb950;
-      --red:       #f85149;
-      --yellow:    #d29922;
-      --purple:    #d2a8ff;
-      --text:      #e6edf3;
-      --muted:     #8b949e;
-      --radius:    8px;
+      --bg:#0d1117; --surface:#161b22; --border:#30363d;
+      --blue:#2f81f7; --green:#3fb950; --red:#f85149;
+      --yellow:#d29922; --purple:#d2a8ff; --text:#e6edf3;
+      --muted:#8b949e; --radius:8px;
     }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.6;
-    }
-
-    a { color: var(--blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* ── NAV ── */
-    nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(13,17,23,0.92);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
-      display: flex; align-items: center; justify-content: space-between;
-      height: 56px;
-    }
-    .nav-brand { font-size: 1.2rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-    .nav-brand span { color: var(--blue); }
-    .nav-links { display: flex; gap: 1.5rem; list-style: none; }
-    .nav-links a { color: var(--muted); font-size: 0.9rem; transition: color 0.15s; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
-
-    /* ── HERO ── */
-    .hero {
-      max-width: 900px; margin: 0 auto;
-      padding: 5rem 2rem 4rem; text-align: center;
-    }
-    .hero-badge {
-      display: inline-block;
-      background: rgba(47,129,247,0.12);
-      border: 1px solid rgba(47,129,247,0.3);
-      color: var(--blue); font-size: 0.78rem; font-weight: 600;
-      padding: 0.3rem 0.9rem; border-radius: 2rem;
-      margin-bottom: 1.5rem; letter-spacing: 0.05em; text-transform: uppercase;
-    }
-    .hero h1 {
-      font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
-      line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 1.2rem;
-    }
-    .hero h1 em { font-style: normal; color: var(--blue); }
-    .hero-sub {
-      font-size: 1.1rem; color: var(--muted);
-      max-width: 600px; margin: 0 auto 2.5rem;
-    }
-    .hero-actions {
-      display: flex; gap: 1rem; justify-content: center;
-      flex-wrap: wrap; margin-bottom: 3rem;
-    }
-    .btn {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.65rem 1.4rem; border-radius: var(--radius);
-      font-size: 0.95rem; font-weight: 600; cursor: pointer;
-      border: none; transition: opacity 0.15s, transform 0.1s;
-      text-decoration: none;
-    }
-    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
-    .btn-primary  { background: var(--blue); color: #fff; }
-    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-
-    /* ── INSTALL ── */
-    .install-block {
-      display: inline-flex; align-items: center; gap: 1rem;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 0.8rem 1.2rem;
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 1rem; color: var(--green); margin-bottom: 0.8rem;
-    }
-    .install-block .prompt { color: var(--muted); user-select: none; }
-    .copy-btn {
-      background: none; border: 1px solid var(--border);
-      border-radius: 4px; color: var(--muted); cursor: pointer;
-      font-size: 0.75rem; padding: 0.2rem 0.5rem;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .copy-btn:hover { color: var(--text); border-color: var(--text); }
-    .install-note { font-size: 0.82rem; color: var(--muted); }
-
-    /* ── MODE TABS ── */
-    .mode-tabs {
-      display: flex; gap: 0.5rem; justify-content: center;
-      margin: 2.5rem 0 0;
-    }
-    .mode-tab {
-      padding: 0.5rem 1.2rem; border-radius: var(--radius);
-      font-size: 0.88rem; font-weight: 600; cursor: pointer;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--muted); transition: all 0.15s;
-    }
-    .mode-tab.active {
-      background: var(--blue); color: #fff; border-color: var(--blue);
-    }
-    .mode-tab:hover:not(.active) { color: var(--text); border-color: var(--text); }
-
-    /* ── TERMINAL ── */
-    .terminal {
-      max-width: 820px; margin: 1.2rem auto 0;
-      background: #010409;
-      border: 1px solid var(--border); border-radius: var(--radius);
-      overflow: hidden; text-align: left;
-      display: none;
-    }
-    .terminal.active { display: block; }
-    .terminal-bar {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem;
-    }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot-r { background: #ff5f56; }
-    .dot-y { background: #ffbd2e; }
-    .dot-g { background: #27c93f; }
-    .terminal-title {
-      color: var(--muted); font-size: 0.8rem;
-      margin: 0 auto; font-family: monospace;
-    }
-    .terminal-body {
-      padding: 1.2rem 1.4rem;
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 0.82rem; line-height: 1.8;
-    }
-    .t-info   { color: var(--muted); }
-    .t-high   { color: var(--red); font-weight: 600; }
-    .t-med    { color: var(--yellow); }
-    .t-ok     { color: var(--green); }
-    .t-ai     { color: var(--purple); }
-    .t-file   { color: #e3b341; }
-    .t-cmd    { color: #79c0ff; }
-    .t-dim    { color: #484f58; }
-    .t-white  { color: var(--text); font-weight: 600; }
-
-    /* ── SECTIONS ── */
-    section { max-width: 1000px; margin: 0 auto; padding: 4rem 2rem; }
-    .section-label {
-      font-size: 0.78rem; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--blue); margin-bottom: 0.8rem;
-    }
-    section h2 {
-      font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
-      letter-spacing: -0.02em; margin-bottom: 1rem;
-    }
-    section > p { color: var(--muted); max-width: 620px; margin-bottom: 2rem; }
-
-    /* ── MODE CARDS ── */
-    .mode-cards {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 1rem; margin-top: 1.5rem;
-    }
-    @media (max-width: 640px) { .mode-cards { grid-template-columns: 1fr; } }
-    .mode-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.4rem;
-      transition: border-color 0.2s;
-    }
-    .mode-card:hover { border-color: var(--blue); }
-    .mode-card-flag {
-      display: inline-block; font-family: monospace; font-size: 0.82rem;
-      background: rgba(47,129,247,0.1); color: var(--blue);
-      padding: 0.2rem 0.6rem; border-radius: 4px;
-      border: 1px solid rgba(47,129,247,0.2); margin-bottom: 0.8rem;
-    }
-    .mode-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .mode-card p  { font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem; }
-    .mode-card code {
-      display: block; font-family: monospace; font-size: 0.82rem;
-      background: var(--bg); color: var(--green);
-      padding: 0.5rem 0.8rem; border-radius: 4px;
-      border: 1px solid var(--border);
-    }
-
-    /* ── FEATURES ── */
-    .features {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem; margin-top: 2rem;
-    }
-    .feature-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.4rem;
-      transition: border-color 0.2s;
-    }
-    .feature-card:hover { border-color: var(--blue); }
-    .feature-icon { font-size: 1.6rem; margin-bottom: 0.8rem; }
-    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
-    .feature-card p  { font-size: 0.88rem; color: var(--muted); margin: 0; }
-
-    /* ── DETECTION GRID ── */
-    .detection-cols {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 1.5rem; margin-top: 1.5rem;
-    }
-    @media (max-width: 640px) { .detection-cols { grid-template-columns: 1fr; } }
-    .detection-group h4 {
-      font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
-      text-transform: uppercase; color: var(--muted);
-      margin-bottom: 0.8rem; padding-bottom: 0.4rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .detection-item {
-      display: flex; align-items: flex-start; gap: 0.7rem;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 0.8rem 0.9rem;
-      font-size: 0.87rem; margin-bottom: 0.5rem;
-    }
-    .sev {
-      font-size: 0.68rem; font-weight: 700;
-      padding: 0.15rem 0.4rem; border-radius: 3px;
-      white-space: nowrap; margin-top: 2px;
-    }
-    .sev-high { background: rgba(248,81,73,0.15);  color: var(--red);    }
-    .sev-med  { background: rgba(210,153,34,0.15); color: var(--yellow); }
-    .sev-low  { background: rgba(47,129,247,0.12); color: var(--blue);   }
-
-    /* ── WAITLIST ── */
-    .waitlist-section {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .waitlist-inner {
-      max-width: 600px; margin: 0 auto;
-      padding: 4rem 2rem; text-align: center;
-    }
-    .waitlist-inner h2 { margin-bottom: 0.6rem; }
-    .waitlist-inner > p { color: var(--muted); margin-bottom: 1.8rem; max-width: 100%; }
-    .waitlist-form { display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center; }
-    .waitlist-form input {
-      flex: 1; min-width: 220px; padding: 0.65rem 1rem;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-      font-size: 0.95rem; outline: none; transition: border-color 0.15s;
-    }
-    .waitlist-form input:focus { border-color: var(--blue); }
-    .waitlist-form input::placeholder { color: var(--muted); }
-
-    /* ── FOOTER ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 2rem; text-align: center;
-      color: var(--muted); font-size: 0.85rem;
-    }
-    footer a { color: var(--muted); }
-    footer a:hover { color: var(--text); }
-    .footer-links {
-      display: flex; gap: 1.5rem; justify-content: center;
-      margin-bottom: 1rem; flex-wrap: wrap;
-    }
-    hr { border: none; border-top: 1px solid var(--border); }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; }
+    a { color:var(--blue); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    nav { position:sticky; top:0; z-index:100; background:rgba(13,17,23,0.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:56px; }
+    .nav-brand { font-size:1.2rem; font-weight:700; color:var(--text); letter-spacing:-0.02em; }
+    .nav-brand span { color:var(--blue); }
+    .nav-links { display:flex; gap:1.5rem; list-style:none; }
+    .nav-links a { color:var(--muted); font-size:0.9rem; transition:color 0.15s; }
+    .nav-links a:hover { color:var(--text); text-decoration:none; }
+    .hero { max-width:900px; margin:0 auto; padding:5rem 2rem 4rem; text-align:center; }
+    .hero-badge { display:inline-block; background:rgba(47,129,247,0.12); border:1px solid rgba(47,129,247,0.3); color:var(--blue); font-size:0.78rem; font-weight:600; padding:0.3rem 0.9rem; border-radius:2rem; margin-bottom:1.5rem; letter-spacing:0.05em; text-transform:uppercase; }
+    .hero h1 { font-size:clamp(2rem,5vw,3.2rem); font-weight:800; line-height:1.15; letter-spacing:-0.03em; margin-bottom:1.2rem; }
+    .hero h1 em { font-style:normal; color:var(--blue); }
+    .hero-sub { font-size:1.1rem; color:var(--muted); max-width:600px; margin:0 auto 2.5rem; }
+    .hero-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-bottom:3rem; }
+    .btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.65rem 1.4rem; border-radius:var(--radius); font-size:0.95rem; font-weight:600; cursor:pointer; border:none; transition:opacity 0.15s,transform 0.1s; text-decoration:none; }
+    .btn:hover { opacity:0.88; transform:translateY(-1px); text-decoration:none; }
+    .btn-primary { background:var(--blue); color:#fff; }
+    .btn-secondary { background:var(--surface); color:var(--text); border:1px solid var(--border); }
+    .install-block { display:inline-flex; align-items:center; gap:1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem 1.2rem; font-family:"SFMono-Regular",Consolas,monospace; font-size:1rem; color:var(--green); margin-bottom:0.8rem; }
+    .install-block .prompt { color:var(--muted); user-select:none; }
+    .copy-btn { background:none; border:1px solid var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font-size:0.75rem; padding:0.2rem 0.5rem; transition:color 0.15s,border-color 0.15s; }
+    .copy-btn:hover { color:var(--text); border-color:var(--text); }
+    .install-note { font-size:0.82rem; color:var(--muted); }
+    .mode-tabs { display:flex; gap:0.5rem; justify-content:center; margin:2.5rem 0 0; }
+    .mode-tab { padding:0.5rem 1.2rem; border-radius:var(--radius); font-size:0.88rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); transition:all 0.15s; }
+    .mode-tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+    .mode-tab:hover:not(.active) { color:var(--text); border-color:var(--text); }
+    .terminal { max-width:820px; margin:1.2rem auto 0; background:#010409; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; text-align:left; display:none; }
+    .terminal.active { display:block; }
+    .terminal-bar { background:var(--surface); border-bottom:1px solid var(--border); padding:0.6rem 1rem; display:flex; align-items:center; gap:0.5rem; }
+    .dot { width:12px; height:12px; border-radius:50%; }
+    .dot-r { background:#ff5f56; } .dot-y { background:#ffbd2e; } .dot-g { background:#27c93f; }
+    .terminal-title { color:var(--muted); font-size:0.8rem; margin:0 auto; font-family:monospace; }
+    .terminal-body { padding:1.2rem 1.4rem; font-family:"SFMono-Regular",Consolas,monospace; font-size:0.82rem; line-height:1.8; }
+    .t-info { color:var(--muted); } .t-high { color:var(--red); font-weight:600; }
+    .t-med { color:var(--yellow); } .t-ok { color:var(--green); }
+    .t-ai { color:var(--purple); } .t-file { color:#e3b341; }
+    .t-dim { color:#484f58; }
+    section { max-width:1000px; margin:0 auto; padding:4rem 2rem; }
+    .section-label { font-size:0.78rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--blue); margin-bottom:0.8rem; }
+    section h2 { font-size:clamp(1.5rem,3vw,2rem); font-weight:700; letter-spacing:-0.02em; margin-bottom:1rem; }
+    section > p { color:var(--muted); max-width:620px; margin-bottom:2rem; }
+    .mode-cards { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.5rem; }
+    @media (max-width:640px) { .mode-cards { grid-template-columns:1fr; } }
+    .mode-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; transition:border-color 0.2s; }
+    .mode-card:hover { border-color:var(--blue); }
+    .mode-card-flag { display:inline-block; font-family:monospace; font-size:0.82rem; background:rgba(47,129,247,0.1); color:var(--blue); padding:0.2rem 0.6rem; border-radius:4px; border:1px solid rgba(47,129,247,0.2); margin-bottom:0.8rem; }
+    .mode-card h3 { font-size:1.05rem; font-weight:700; margin-bottom:0.5rem; }
+    .mode-card p { font-size:0.88rem; color:var(--muted); margin:0 0 0.8rem; }
+    .mode-card code { display:block; font-family:monospace; font-size:0.82rem; background:var(--bg); color:var(--green); padding:0.5rem 0.8rem; border-radius:4px; border:1px solid var(--border); }
+    .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin-top:2rem; }
+    .feature-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; transition:border-color 0.2s; }
+    .feature-card:hover { border-color:var(--blue); }
+    .feature-icon { font-size:1.6rem; margin-bottom:0.8rem; }
+    .feature-card h3 { font-size:1rem; font-weight:700; margin-bottom:0.4rem; }
+    .feature-card p { font-size:0.88rem; color:var(--muted); margin:0; }
+    .detection-cols { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:1.5rem; }
+    @media (max-width:640px) { .detection-cols { grid-template-columns:1fr; } }
+    .detection-group h4 { font-size:0.82rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:0.8rem; padding-bottom:0.4rem; border-bottom:1px solid var(--border); }
+    .detection-item { display:flex; align-items:flex-start; gap:0.7rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:0.8rem 0.9rem; font-size:0.87rem; margin-bottom:0.5rem; }
+    .sev { font-size:0.68rem; font-weight:700; padding:0.15rem 0.4rem; border-radius:3px; white-space:nowrap; margin-top:2px; }
+    .sev-high { background:rgba(248,81,73,0.15); color:var(--red); }
+    .sev-med { background:rgba(210,153,34,0.15); color:var(--yellow); }
+    .sev-low { background:rgba(47,129,247,0.12); color:var(--blue); }
+    .waitlist-section { background:var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .waitlist-inner { max-width:600px; margin:0 auto; padding:4rem 2rem; text-align:center; }
+    .waitlist-inner h2 { margin-bottom:0.6rem; }
+    .waitlist-inner > p { color:var(--muted); margin-bottom:1.8rem; max-width:100%; }
+    .waitlist-form { display:flex; gap:0.6rem; flex-wrap:wrap; justify-content:center; }
+    .waitlist-form input { flex:1; min-width:220px; padding:0.65rem 1rem; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); font-size:0.95rem; outline:none; transition:border-color 0.15s; }
+    .waitlist-form input:focus { border-color:var(--blue); }
+    .waitlist-form input::placeholder { color:var(--muted); }
+    footer { border-top:1px solid var(--border); padding:2rem; text-align:center; color:var(--muted); font-size:0.85rem; }
+    footer a { color:var(--muted); }
+    footer a:hover { color:var(--text); }
+    .footer-links { display:flex; gap:1.5rem; justify-content:center; margin-bottom:1rem; flex-wrap:wrap; }
+    hr { border:none; border-top:1px solid var(--border); }
   </style>
 </head>
 <body>
 
-<!-- ── NAV ───────────────────────────────────────────────────────────────── -->
 <nav>
   <span class="nav-brand">Permi<span>.</span></span>
   <ul class="nav-links">
     <li><a href="#modes">Scan modes</a></li>
     <li><a href="#features">Features</a></li>
     <li><a href="#detects">What it detects</a></li>
+    <li><a href="#action">GitHub Action</a></li>
     <li><a href="#waitlist">Waitlist</a></li>
     <li><a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a></li>
     <li><a href="https://pypi.org/project/permi/" target="_blank">PyPI</a></li>
   </ul>
 </nav>
 
-<!-- ── HERO ──────────────────────────────────────────────────────────────── -->
 <section class="hero">
-  <div class="hero-badge">Open Source · Free to Install · Built in Nigeria</div>
-
-  <h1>Security scanning that<br><em>Nigerian developers</em> actually use</h1>
-
+  <div class="hero-badge">Open Source · Free to Install · Built in Nigeria 🇳🇬</div>
+  <h1>Security findings your<br><em>fintech team</em> will actually trust</h1>
   <p class="hero-sub">
-    Permi scans live websites and source code for vulnerabilities, then uses
-    AI to filter out false positives — so you only see findings that matter.
-    No cloud. No login. Just install and scan.
+    Permi scans your code and live applications for vulnerabilities, then uses AI
+    to confirm which findings are real. Stop chasing false alarms.
+    Start fixing what matters. Nigerian-specific rules no foreign scanner writes.
   </p>
-
   <div class="hero-actions">
-    <a class="btn btn-primary" href="https://pypi.org/project/permi/" target="_blank">
-      Install from PyPI
-    </a>
-    <a class="btn btn-secondary" href="https://github.com/Peternasarah/permi" target="_blank">
-      View on GitHub
-    </a>
-    <a class="btn btn-secondary" href="#waitlist">
-      Join the waitlist
-    </a>
+    <a class="btn btn-primary" href="https://pypi.org/project/permi/" target="_blank">Install from PyPI</a>
+    <a class="btn btn-secondary" href="https://github.com/Peternasarah/permi" target="_blank">View on GitHub</a>
+    <a class="btn btn-secondary" href="https://github.com/marketplace/actions/permi-security-scanner" target="_blank">GitHub Action</a>
+    <a class="btn btn-secondary" href="#waitlist">Join the waitlist</a>
   </div>
-
   <div class="install-block">
     <span class="prompt">$</span>
     <span id="install-cmd">pip install permi</span>
     <button class="copy-btn" onclick="copyInstall()">copy</button>
   </div>
   <div class="install-note">Requires Python 3.9+ &nbsp;·&nbsp; Windows, macOS, Linux</div>
-
-  <!-- Mode tabs + terminal demos -->
   <div class="mode-tabs">
-    <button class="mode-tab active" onclick="showMode('url')">
-      --url &nbsp; Live website scan
-    </button>
-    <button class="mode-tab" onclick="showMode('path')">
-      --path &nbsp; Source code scan
-    </button>
+    <button class="mode-tab active" onclick="showMode('url')">--url &nbsp; Live website scan</button>
+    <button class="mode-tab" onclick="showMode('path')">--path &nbsp; Source code scan</button>
   </div>
-
-  <!-- URL DEMO -->
   <div class="terminal active" id="demo-url">
     <div class="terminal-bar">
-      <div class="dot dot-r"></div>
-      <div class="dot dot-y"></div>
-      <div class="dot dot-g"></div>
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
       <span class="terminal-title">permi scan --url https://yoursite.com</span>
     </div>
     <div class="terminal-body">
-      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗</div>
-      <div class="t-dim">  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
-      <div class="t-dim">  ██████╔╝█████╗  ██████╔╝██╔████╔██║██║</div>
-      <div class="t-dim">  ██╔═══╝ ██╔══╝  ██╔══██╗██║╚██╔╝██║██║</div>
-      <div class="t-dim">  ██║     ███████╗██║  ██║██║ ╚═╝ ██║██║</div>
-      <div class="t-dim">  ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝</div>
+      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
       <br>
       <div class="t-info">[Permi] Mode     : Web scan (active HTTP testing)</div>
       <div class="t-info">[Permi] Target   : https://yoursite.com</div>
-      <div class="t-info">[Permi] Crawl    : up to 30 pages</div>
-      <br>
       <div class="t-info">[Permi] Engine found 4 raw finding(s)</div>
       <div class="t-info">[Permi] Running AI filter on 4 finding(s)...</div>
       <br>
-      <div><span class="t-ai">  [1/4] WEB_SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;SQL error returned when quote injected into 'id' parameter.</div>
-      <div><span class="t-ai">  [2/4] WEB_XSS001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Payload reflected unencoded in HTML response.</div>
-      <div><span class="t-ai">  [3/4] WEB_HDR001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;HSTS, CSP, and X-Frame-Options headers are missing.</div>
-      <div><span class="t-ai">  [4/4] WEB_HDR002</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;Server header present but no version disclosed — not exploitable.</div>
+      <div><span class="t-ai">  [1/4] WEB_SQL001</span> &nbsp;<span class="t-ok">REAL (97%)</span> &nbsp;SQL error returned — unsanitised input reaches query.</div>
+      <div><span class="t-ai">  [2/4] WEB_XSS001</span> &nbsp;<span class="t-ok">REAL (91%)</span> &nbsp;Payload reflected unencoded in HTML response.</div>
+      <div><span class="t-ai">  [3/4] WEB_HDR001</span> &nbsp;<span class="t-ok">REAL (95%)</span> &nbsp;HSTS, CSP, and X-Frame-Options headers missing.</div>
+      <div><span class="t-ai">  [4/4] WEB_HDR002</span> &nbsp;<span class="t-med">FP  (90%)</span> &nbsp;Server header present but no version disclosed.</div>
       <br>
-      <div class="t-info">[Permi] Filter complete — 3 real &nbsp;|&nbsp; 1 false positive removed</div>
+      <div class="t-info">[Permi] Filter complete — 3 confirmed real &nbsp;|&nbsp; 1 false positive suppressed</div>
       <br>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_SQL001</span> — /search?id=1 — SQL Injection (Error-based)</div>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_XSS001</span> — /search?q=test — Reflected XSS</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_SQL001</span> — /search?id=1</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">WEB_XSS001</span> — /search?q=test</div>
       <div><span class="t-med">  [MEDIUM]</span> &nbsp;<span class="t-file">WEB_HDR001</span> — Missing Security Headers</div>
       <br>
-      <div class="t-ok">  Total: 3 findings &nbsp;·&nbsp; 2 high &nbsp;·&nbsp; 1 medium &nbsp;·&nbsp; 1 FP removed</div>
+      <div class="t-ok">  Scan completed in 48s | 3 confirmed findings | 1 false positive suppressed</div>
     </div>
   </div>
-
-  <!-- PATH DEMO -->
   <div class="terminal" id="demo-path">
     <div class="terminal-bar">
-      <div class="dot dot-r"></div>
-      <div class="dot dot-y"></div>
-      <div class="dot dot-g"></div>
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
       <span class="terminal-title">permi scan --path ./myapp</span>
     </div>
     <div class="terminal-body">
-      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗</div>
-      <div class="t-dim">  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
-      <div class="t-dim">  ██████╔╝█████╗  ██████╔╝██╔████╔██║██║</div>
-      <div class="t-dim">  ██╔═══╝ ██╔══╝  ██╔══██╗██║╚██╔╝██║██║</div>
-      <div class="t-dim">  ██║     ███████╗██║  ██║██║ ╚═╝ ██║██║</div>
-      <div class="t-dim">  ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝</div>
+      <div class="t-dim">  ██████╗ ███████╗██████╗ ███╗   ███╗██╗  ██╔══██╗██╔════╝██╔══██╗████╗ ████║██║</div>
       <br>
-      <div class="t-info">[Permi] Scanning : /home/peter/myapp</div>
+      <div class="t-info">[Permi] Scanning : ./myapp</div>
       <div class="t-info">[Permi] Engine found 9 raw finding(s) across 3 file(s)</div>
       <div class="t-info">[Permi] Running AI filter on 9 finding(s)...</div>
       <br>
-      <div><span class="t-ai">  [1/9] SQL001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;String concatenation embeds user input into SQL query.</div>
-      <div><span class="t-ai">  [2/9] SEC001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;Hardcoded database password poses a critical security risk.</div>
-      <div><span class="t-ai">  [3/9] USSD001</span> &nbsp;<span class="t-med">FP</span> &nbsp;&nbsp;sessionId is server-generated — no validation risk here.</div>
-      <div><span class="t-ai">  [4/9] INS003</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;eval() on user input allows arbitrary code execution.</div>
-      <div><span class="t-ai">  [5/9] XSS001</span> &nbsp;<span class="t-ok">REAL</span> &nbsp;User input assigned to innerHTML without sanitisation.</div>
+      <div><span class="t-ai">  [1/9] SQL001</span> &nbsp;<span class="t-ok">REAL (95%)</span> &nbsp;String concatenation builds SQL from user input.</div>
+      <div><span class="t-ai">  [2/9] SEC001</span> &nbsp;<span class="t-ok">REAL (95%)</span> &nbsp;Hardcoded database password — critical exposure risk.</div>
+      <div><span class="t-ai">  [3/9] USSD001</span> &nbsp;<span class="t-med">FP  (92%)</span> &nbsp;sessionId is server-generated — no injection risk.</div>
+      <div><span class="t-ai">  [4/9] INS003</span> &nbsp;<span class="t-ok">REAL (95%)</span> &nbsp;eval() on user input enables code execution.</div>
+      <div><span class="t-ai">  [5/9] XSS001</span> &nbsp;<span class="t-ok">REAL (90%)</span> &nbsp;User input assigned to innerHTML unsanitised.</div>
       <br>
-      <div class="t-info">[Permi] Filter complete — 6 real &nbsp;|&nbsp; 3 false positive(s) removed</div>
+      <div class="t-info">[Permi] Filter complete — 6 confirmed real &nbsp;|&nbsp; 3 false positives suppressed &nbsp;|&nbsp; noise reduced 33%</div>
       <br>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SQL001</span> — app/auth.py line 8</div>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SEC001</span> — app/auth.py line 12</div>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">INS003</span> — app/ussd.py line 11</div>
-      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">XSS001</span> — app/views.py line 11</div>
-      <br>
-      <div class="t-ok">  Total: 6 findings &nbsp;·&nbsp; 5 high &nbsp;·&nbsp; 1 medium &nbsp;·&nbsp; 3 FPs removed</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SQL001</span> — app/auth.py:8 &nbsp;&nbsp; Fix: cursor.execute("SELECT * FROM users WHERE name = ?", (name,))</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">SEC001</span> — app/auth.py:12 &nbsp; Fix: os.environ.get("DB_PASSWORD")</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">INS003</span> — app/ussd.py:11 &nbsp; Fix: replace eval() with ast.literal_eval()</div>
+      <div><span class="t-high">  [HIGH]</span> &nbsp;<span class="t-file">XSS001</span> — app/views.py:11 &nbsp; Fix: use element.textContent not innerHTML</div>
     </div>
   </div>
-
 </section>
 
 <hr>
 
-<!-- ── TWO MODES ───────────────────────────────────────────────────────────── -->
 <section id="modes">
   <div class="section-label">Two scan modes</div>
-  <h2>Scan websites live or scan code before it ships</h2>
-  <p>
-    Most security tools do one or the other. Permi does both — from a single
-    install, with a single CLI command.
-  </p>
-
+  <h2>Scan websites live. Scan code before it ships.</h2>
+  <p>Most security tools do one or the other. Permi does both — from a single install, one CLI command.</p>
   <div class="mode-cards">
     <div class="mode-card">
       <div class="mode-card-flag">--url</div>
       <h3>Live web scanning</h3>
-      <p>
-        Point Permi at any website. It crawls the pages, injects test payloads
-        into parameters, and checks security headers on the running application.
-        No source code access needed.
-      </p>
+      <p>Crawls pages, injects test payloads into parameters, checks security headers. Add --js for React, Vue, Angular, and Next.js SPAs using a headless Playwright browser.</p>
       <code>permi scan --url https://yoursite.com</code>
     </div>
     <div class="mode-card">
       <div class="mode-card-flag">--path</div>
       <h3>Static source scanning</h3>
-      <p>
-        Point Permi at a local folder or GitHub URL. It reads your code,
-        matches vulnerability patterns, and catches issues before they ever
-        reach production.
-      </p>
+      <p>Reads your code, matches vulnerability patterns, catches issues before production. Works on local folders or any public GitHub repository URL.</p>
       <code>permi scan --path ./myapp</code>
     </div>
   </div>
@@ -450,247 +215,169 @@
 
 <hr>
 
-<!-- ── FEATURES ───────────────────────────────────────────────────────────── -->
 <section id="features">
   <div class="section-label">Why Permi</div>
-  <h2>Built for how Nigerian developers actually work</h2>
-  <p>
-    Most security tools were built for enterprise teams in San Francisco.
-    Permi was built for developers in Lagos, Jos, Abuja — and everywhere else
-    where good security tooling should not cost more than a developer earns.
-  </p>
-
+  <h2>Precision over volume. Context over noise.</h2>
+  <p>Most scanners were built for enterprise teams in San Francisco. Permi was built for developers in Lagos, Jos, Abuja — with rules no foreign tool will ever prioritise.</p>
   <div class="features">
     <div class="feature-card">
-      <div class="feature-icon">🤖</div>
-      <h3>AI false-positive filter</h3>
-      <p>Every finding is reviewed by an LLM before you see it.
-         Real vulnerabilities surface. Noise disappears.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🌐</div>
-      <h3>Live web scanning</h3>
-      <p>Crawls pages, tests SQL injection payloads, checks XSS, and
-         audits security headers on any running website.</p>
+      <div class="feature-icon">🎯</div>
+      <h3>Precision-first AI filter</h3>
+      <p>Every finding is confirmed by an AI model before you see it. Real vulnerabilities surface. Noise disappears. Average noise reduction: 59% on real-world targets.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🇳🇬</div>
-      <h3>Nigerian-specific rules</h3>
-      <p>USSD gateway vulnerabilities, Paystack and Flutterwave secret
-         key detection, NDPR-relevant checks. No foreign scanner
-         understands this market.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">💻</div>
-      <h3>Works offline</h3>
-      <p>No cloud backend. No login. Scans run on your machine.
-         Use <code style="background:var(--bg);padding:0.1rem 0.3rem;border-radius:3px;">--offline</code>
-         to skip AI calls when your connection is slow.</p>
+      <h3>African fintech rules</h3>
+      <p>USSD gateway vulnerabilities, Paystack and Flutterwave secret key exposure, BVN/NIN pattern detection, NDPA-relevant checks. No Semgrep ruleset does this.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔗</div>
-      <h3>GitHub URL support</h3>
-      <p>Scan any public GitHub repository directly. Permi clones it,
-         scans it, and deletes the clone automatically.</p>
+      <h3>GitHub Action — free forever</h3>
+      <p>Scan every pull request automatically. Post findings as PR comments. Block merges on high severity findings. One line to add to your workflow.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌐</div>
+      <h3>JS/SPA scanning</h3>
+      <p>Add --js to scan React, Vue, Angular, and Next.js apps using a headless Playwright browser. Discovers endpoints invisible to standard HTTP crawlers.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔧</div>
+      <h3>Inline fix templates</h3>
+      <p>Every finding includes a Fix: line with the exact code change needed. Not a link to a blog post — the actual fix, for your language and framework.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🆓</div>
       <h3>Free and open source</h3>
-      <p>Install for free. Use forever. The core scanner engine is
-         open source. No credit card. No trial period.</p>
+      <p>Install for free. Use forever. The core scanner is open source. No credit card. No trial period. 50 free AI filter credits with permi setup --community.</p>
     </div>
   </div>
 </section>
 
 <hr>
 
-<!-- ── WHAT IT DETECTS ────────────────────────────────────────────────────── -->
+<section id="action">
+  <div class="section-label">CI/CD Integration</div>
+  <h2>Scan every pull request automatically</h2>
+  <p>The Permi GitHub Action runs on every PR, posts findings as comments, and blocks merges if high severity vulnerabilities are found. Free forever.</p>
+  <div class="terminal active" style="max-width:820px;margin:1.5rem 0 0;">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span class="terminal-title">.github/workflows/security.yml</span>
+    </div>
+    <div class="terminal-body">
+      <div class="t-ok">name: Security Scan</div>
+      <br>
+      <div class="t-info">on:</div>
+      <div class="t-info">&nbsp;&nbsp;pull_request:</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;branches: [main, develop]</div>
+      <br>
+      <div class="t-info">jobs:</div>
+      <div class="t-info">&nbsp;&nbsp;permi-scan:</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;runs-on: ubuntu-latest</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;permissions:</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contents: read</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pull-requests: write</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;steps:</div>
+      <div class="t-info">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- uses: actions/checkout@v4</div>
+      <div class="t-ok">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- uses: Peternasarah/permi-action@v1</div>
+      <div class="t-ok">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with:</div>
+      <div class="t-ok">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;severity: high</div>
+      <div class="t-ok">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}</div>
+    </div>
+  </div>
+  <div style="margin-top:1.2rem;">
+    <a class="btn btn-primary" href="https://github.com/marketplace/actions/permi-security-scanner" target="_blank">View on GitHub Marketplace</a>
+    &nbsp;
+    <a class="btn btn-secondary" href="https://github.com/Peternasarah/permi-action" target="_blank">Action source code</a>
+  </div>
+</section>
+
+<hr>
+
 <section id="detects">
   <div class="section-label">Detection</div>
   <h2>What Permi finds</h2>
-  <p>
-    Coverage across both scan modes. Web scanning tests your running
-    application. Source scanning catches issues before they ship.
-  </p>
-
+  <p>Coverage across both scan modes. Web scanning tests your running application. Source scanning catches issues before they ship.</p>
   <div class="detection-cols">
-    <!-- Web scan -->
     <div class="detection-group">
       <h4>🌐 Web scan (--url)</h4>
-      <div class="detection-item">
-        <span class="sev sev-high">HIGH</span>
-        <div>
-          <strong>SQL Injection</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            Error-based, boolean-based blind, time-based blind
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-high">HIGH</span>
-        <div>
-          <strong>Reflected XSS</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            Context-aware payload testing across all parameters
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-med">MED</span>
-        <div>
-          <strong>Missing Security Headers</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            HSTS, CSP, X-Frame-Options, X-Content-Type-Options
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-low">LOW</span>
-        <div>
-          <strong>Server Information Disclosure</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            Server and X-Powered-By header leakage
-          </span>
-        </div>
-      </div>
+      <div class="detection-item"><span class="sev sev-high">HIGH</span><div><strong>SQL Injection</strong><br><span style="color:var(--muted);font-size:0.82rem">Error-based, boolean-based blind, time-based blind</span></div></div>
+      <div class="detection-item"><span class="sev sev-high">HIGH</span><div><strong>Reflected XSS</strong><br><span style="color:var(--muted);font-size:0.82rem">Context-aware payload testing, CSP-aware AI verdict</span></div></div>
+      <div class="detection-item"><span class="sev sev-med">MED</span><div><strong>Missing Security Headers</strong><br><span style="color:var(--muted);font-size:0.82rem">HSTS, CSP, X-Frame-Options, Permissions-Policy</span></div></div>
+      <div class="detection-item"><span class="sev sev-low">LOW</span><div><strong>Server Version Disclosure</strong><br><span style="color:var(--muted);font-size:0.82rem">Server and X-Powered-By version number leakage</span></div></div>
     </div>
-
-    <!-- Source scan -->
     <div class="detection-group">
       <h4>📁 Source scan (--path)</h4>
-      <div class="detection-item">
-        <span class="sev sev-high">HIGH</span>
-        <div>
-          <strong>SQL Injection in Code</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            String concat, f-strings, % formatting in queries
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-high">HIGH</span>
-        <div>
-          <strong>Hardcoded Secrets</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            Passwords, API keys, AWS keys, Paystack/Flutterwave keys
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-high">HIGH</span>
-        <div>
-          <strong>Code Execution & XSS</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            eval(), exec(), innerHTML, pickle.loads()
-          </span>
-        </div>
-      </div>
-      <div class="detection-item">
-        <span class="sev sev-med">MED</span>
-        <div>
-          <strong>USSD Vulnerabilities</strong><br>
-          <span style="color:var(--muted);font-size:0.82rem">
-            Unvalidated sessionId, phoneNumber, serviceCode
-          </span>
-        </div>
-      </div>
+      <div class="detection-item"><span class="sev sev-high">HIGH</span><div><strong>SQL Injection in Code</strong><br><span style="color:var(--muted);font-size:0.82rem">String concat, f-strings, % formatting in queries</span></div></div>
+      <div class="detection-item"><span class="sev sev-high">HIGH</span><div><strong>Hardcoded Secrets</strong><br><span style="color:var(--muted);font-size:0.82rem">Passwords, API keys, AWS keys, Paystack/Flutterwave secrets</span></div></div>
+      <div class="detection-item"><span class="sev sev-high">HIGH</span><div><strong>Dangerous Code Execution</strong><br><span style="color:var(--muted);font-size:0.82rem">eval(), exec(), pickle.loads(), shell=True, os.system()</span></div></div>
+      <div class="detection-item"><span class="sev sev-med">MED</span><div><strong>USSD Vulnerabilities 🇳🇬</strong><br><span style="color:var(--muted);font-size:0.82rem">Unvalidated sessionId, phoneNumber, serviceCode</span></div></div>
     </div>
   </div>
 </section>
 
 <hr>
 
-<!-- ── WAITLIST ───────────────────────────────────────────────────────────── -->
 <div class="waitlist-section" id="waitlist">
   <div class="waitlist-inner">
     <div class="section-label">Early access</div>
     <h2>Join the Permi waitlist</h2>
-    <p>
-      Be the first to know when the VS Code extension, NDPR compliance
-      reports, and Pro tier launch. No spam. Unsubscribe anytime.
-    </p>
+    <p>Be first to access the VS Code extension, NDPA compliance reports, unlimited AI credits, and Pro tier features when they launch. No spam. Unsubscribe anytime.</p>
     <div class="waitlist-form">
       <input type="email" id="waitlist-email" placeholder="your@email.com" autocomplete="email" />
       <button class="btn btn-primary" onclick="submitWaitlist()">Join waitlist</button>
     </div>
-    <p id="waitlist-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--green);display:none;">
-      You are on the list! We will be in touch.
-    </p>
+    <p id="waitlist-msg" style="margin-top:1rem;font-size:0.85rem;color:var(--green);display:none;">You are on the list! We will be in touch.</p>
     <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted)">
       Already installed? Give us a &#11088; on
       <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
-      — it helps more developers find Permi.
+      — it helps more African developers find Permi.
     </p>
   </div>
 </div>
 
-<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
 <footer>
   <div class="footer-links">
     <a href="https://github.com/Peternasarah/permi" target="_blank">GitHub</a>
     <a href="https://pypi.org/project/permi/" target="_blank">PyPI</a>
+    <a href="https://github.com/marketplace/actions/permi-security-scanner" target="_blank">GitHub Action</a>
     <a href="https://github.com/Peternasarah/permi/issues" target="_blank">Report a bug</a>
     <a href="https://github.com/Peternasarah/permi/blob/main/SECURITY.md" target="_blank">Security policy</a>
     <a href="https://github.com/Peternasarah/permi/blob/main/LICENSE" target="_blank">License</a>
   </div>
   <p>
-    Built by
-    <a href="https://github.com/Peternasarah" target="_blank">Peter Nasarah Dashe</a>
+    Built by <a href="https://github.com/Peternasarah" target="_blank">Peter Nasarah Dashe</a>
     &nbsp;·&nbsp; University of Jos, Nigeria
     &nbsp;·&nbsp;
     <em>Built in Nigeria. For Nigeria. Then for the World.</em>
   </p>
 </footer>
 
-<!-- Hidden iframe for Google Forms submission -->
 <iframe id="hidden-iframe" name="hidden-iframe" style="display:none;" title="Form submission"></iframe>
-
 <script>
-  // ── Mode tab toggle ──────────────────────────────────────────────────────
   function showMode(mode) {
-    document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.terminal').forEach(function(t) { t.classList.remove('active'); });
-
+    document.querySelectorAll('.mode-tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.terminal').forEach(function(t){t.classList.remove('active');});
     event.target.classList.add('active');
-    document.getElementById('demo-' + mode).classList.add('active');
+    document.getElementById('demo-'+mode).classList.add('active');
   }
-
-  // ── Copy install command ─────────────────────────────────────────────────
   function copyInstall() {
-    navigator.clipboard.writeText('pip install permi').then(function() {
-      var btn = document.querySelector('.copy-btn');
-      btn.textContent = 'copied!';
-      btn.style.color = '#3fb950';
-      setTimeout(function() {
-        btn.textContent = 'copy';
-        btn.style.color = '';
-      }, 2000);
+    navigator.clipboard.writeText('pip install permi').then(function(){
+      var btn=document.querySelector('.copy-btn');
+      btn.textContent='copied!';btn.style.color='#3fb950';
+      setTimeout(function(){btn.textContent='copy';btn.style.color='';},2000);
     });
   }
-
-  // ── Waitlist form ────────────────────────────────────────────────────────
   function submitWaitlist() {
-    var email = document.getElementById('waitlist-email').value.trim();
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-    var FORM_ID  = '1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
-    var ENTRY_ID = 'entry.1647892528';
-    var iframe   = document.getElementById('hidden-iframe');
-    iframe.src   =
-      'https://docs.google.com/forms/d/e/' + FORM_ID +
-      '/formResponse?' + ENTRY_ID + '=' + encodeURIComponent(email) +
-      '&submit=Submit';
-    document.getElementById('waitlist-email').value = '';
-    document.getElementById('waitlist-msg').style.display = 'block';
+    var email=document.getElementById('waitlist-email').value.trim();
+    if(!email||!email.includes('@')){alert('Please enter a valid email address.');return;}
+    var FORM_ID='1FAIpQLSfFhEdIKKCrE2edKzz0Q6wvHHijJxD8M585wJZFYUoYpGL4HQ';
+    var ENTRY_ID='entry.1647892528';
+    document.getElementById('hidden-iframe').src='https://docs.google.com/forms/d/e/'+FORM_ID+'/formResponse?'+ENTRY_ID+'='+encodeURIComponent(email)+'&submit=Submit';
+    document.getElementById('waitlist-email').value='';
+    document.getElementById('waitlist-msg').style.display='block';
   }
-
-  // Allow Enter key on waitlist input
-  document.getElementById('waitlist-email').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') { submitWaitlist(); }
-  });
+  document.getElementById('waitlist-email').addEventListener('keydown',function(e){if(e.key==='Enter'){submitWaitlist();}});
 </script>
-
 </body>
 </html>

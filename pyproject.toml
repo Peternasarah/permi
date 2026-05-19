@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.2.16"
-description = "AI-powered vulnerability scanner for Nigerian developers and global SMBs"
+version = "0.2.17"
+description = "The security signal filter for African fintech engineering teams — precision-first AppSec that removes false positives so developers only see findings that matter"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "LicenseRef-PERMI-COMMUNITY-LICENSE"
@@ -20,13 +20,20 @@ keywords = [
     "SAST",
     "AI",
     "nigeria",
+    "africa",
+    "fintech",
     "cybersecurity",
     "developer-tools",
     "CLI",
     "SQL-injection",
     "XSS",
     "secrets-detection",
-    "USSD"
+    "USSD",
+    "NDPA",
+    "NDPR",
+    "false-positive-reduction",
+    "appsec",
+    "devsecops"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -51,11 +58,18 @@ dependencies = [
     "beautifulsoup4",
 ]
 
+[project.optional-dependencies]
+js = [
+    "playwright",
+    "playwright-stealth",
+]
+
 [project.urls]
 Homepage = "https://github.com/Peternasarah/permi"
 Repository = "https://github.com/Peternasarah/permi"
 "Bug Tracker" = "https://github.com/Peternasarah/permi/issues"
 Changelog = "https://github.com/Peternasarah/permi/releases"
+"GitHub Action" = "https://github.com/marketplace/actions/permi-security-scanner"
 
 [project.scripts]
 permi = "cli.main:cli"
