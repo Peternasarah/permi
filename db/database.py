@@ -27,12 +27,14 @@ def get_permi_dir() -> Path:
     return permi_dir
 
 
+from typing import Optional
+
 # ── Lazy path resolution ──────────────────────────────────────────────────────
 # Never compute these at module load time — that triggers filesystem access
 # on import, which causes Windows Defender to freeze the process before
 # any CLI output appears.
-_DB_PATH:     Path | None = None
-_CONFIG_PATH: Path | None = None
+_DB_PATH:     Optional[Path] = None
+_CONFIG_PATH: Optional[Path] = None
 
 
 def get_db_path() -> Path:
