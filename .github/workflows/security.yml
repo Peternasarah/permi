@@ -18,3 +18,4 @@ jobs:
         with:
           severity: high
           openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
+          token: ${{ github.token }}  # Add this
