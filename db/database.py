@@ -5,9 +5,7 @@
 # This works correctly whether Permi was installed via pip or run from source.
 # The ~/.permi directory is created automatically on first use.
 #
-# FIX v0.2.17: DB_PATH is now computed lazily via get_db_path().
-# Previously it was computed at module-level which caused Windows machines
-# with Defender/antivirus to freeze on import — before the banner even appeared.
+
 
 import sqlite3
 from pathlib import Path
