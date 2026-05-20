@@ -41,7 +41,7 @@ def print_banner():
   ██╔═══╝ ██╔══╝  ██╔══██╗██║╚██╔╝██║██║
   ██║     ███████╗██║  ██║██║ ╚═╝ ██║██║
   ╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝{Style.RESET_ALL}
-{Fore.WHITE}{Style.BRIGHT}  AI-Powered Vulnerability Scanner{Style.RESET_ALL}
+{Fore.WHITE}{Style.BRIGHT}  Security Signal Filter for African Fintech Teams{Style.RESET_ALL}
 {Fore.CYAN}  Built in Nigeria. For Nigeria. Then for the World.{Style.RESET_ALL}
 {Fore.WHITE}  github.com/Peternasarah/permi  ·  pypi.org/project/permi{Style.RESET_ALL}
 """)
@@ -253,6 +253,7 @@ def scan(url, path, output, severity, offline, project,
             if not url.startswith(("http://", "https://")):
                 url = "https://" + url
 
+            _t0 = time.time()
             if use_js:
                 try:
                     from playwright.async_api import async_playwright  # noqa: F401
@@ -275,9 +276,7 @@ def scan(url, path, output, severity, offline, project,
                 print(f"{Fore.CYAN}[Permi] Timeout  : {js_timeout}s per page{Style.RESET_ALL}\n")
             else:
                 print(f"{Fore.CYAN}[Permi] Crawl    : up to {max_pages} pages{Style.RESET_ALL}\n")
-
-            _t0 = time.time()
-
+                
             raw_findings, info = scan_url(
                 url,
                 max_pages          = max_pages,
@@ -309,8 +308,11 @@ def scan(url, path, output, severity, offline, project,
                     f"[Permi] Or:  permi setup --api-key YOUR_KEY{Style.RESET_ALL}\n"
                 )
                 findings = raw_findings
+            
             else:
                 findings = run_filter(raw_findings, offline=False)
+                from scanner.intelligence import record_scan
+                record_scan(findings, raw_count, scan_mode="url", duration_seconds=int(time.time() - _t0))
 
             if severity != "all":
                 level    = order[severity]
@@ -390,9 +392,16 @@ def scan(url, path, output, severity, offline, project,
                 )
                 offline = True
 
+            _t0 = time.time()
             findings, raw_count = scan_path(
                 path=path, project_name=project, offline=offline,
-            )
+            )            
+
+            try:
+                from scanner.intelligence import record_scan
+                record_scan(findings, raw_count, scan_mode="path", duration_seconds=int(time.time() - _t0))
+            except Exception:
+                pass
 
             if severity != "all":
                 level    = order[severity]
@@ -617,6 +626,89 @@ def info():
   Free API key       : https://openrouter.ai
     """)
 
+@cli.command()
+def stats():
+    """Show your accumulated scan intelligence — which rules fire most, what frameworks you scan, how accurate the filter is."""
+    from scanner.intelligence import get_local_stats, get_rule_precision_report
+
+    data = get_local_stats()
+
+    if not data or data.get("total_scans", 0) == 0:
+        click.echo(
+            f"\n{Fore.YELLOW}[Permi] No scan data yet.\n"
+            f"[Permi] Run a few scans and come back.{Style.RESET_ALL}\n"
+        )
+        return
+
+    scans  = data.get("total_scans", 0)
+    raw    = data.get("total_raw", 0)
+    real   = data.get("total_confirmed", 0)
+    fp     = data.get("total_fp", 0)
+    noise  = data.get("overall_noise_reduction", 0)
+
+    click.echo(f"""
+{Fore.CYAN}{Style.BRIGHT}  Permi — Your Scan Intelligence{Style.RESET_ALL}
+  {Fore.WHITE}Data is stored locally in ~/.permi/intelligence.db{Style.RESET_ALL}
+  {'─' * 60}
+  {'Total scans run':<28}: {scans}
+  {'Raw findings total':<28}: {raw}
+  {'Confirmed real findings':<28}: {real}
+  {'False positives removed':<28}: {fp}
+  {'Overall noise reduction':<28}: {Fore.GREEN}{noise}%{Style.RESET_ALL}
+  {'─' * 60}""")
+
+    # Top rules
+    top_rules = data.get("top_rules", [])
+    if top_rules:
+        click.echo(f"\n  {Fore.WHITE}{Style.BRIGHT}Rules firing most often:{Style.RESET_ALL}")
+        for r in top_rules[:7]:
+            prec_color = (
+                Fore.GREEN if r["precision"] >= 80
+                else Fore.YELLOW if r["precision"] >= 50
+                else Fore.RED
+            )
+            click.echo(
+                f"    {r['rule_id']:<12} "
+                f"{r['total']:>4} fires  "
+                f"{prec_color}{r['precision']:>5.1f}% precision{Style.RESET_ALL}"
+                f"  ({r['real']} real, {r['fp']} FP)"
+            )
+
+    # Frameworks
+    frameworks = data.get("top_frameworks", [])
+    if frameworks:
+        fw_str = ", ".join(f"{f['name']} ({f['count']})" for f in frameworks[:6])
+        click.echo(f"\n  {Fore.WHITE}{Style.BRIGHT}Frameworks scanned:{Style.RESET_ALL} {fw_str}")
+
+    # Payment APIs
+    apis = data.get("payment_apis", [])
+    if apis:
+        click.echo(f"\n  {Fore.WHITE}{Style.BRIGHT}Payment APIs encountered:{Style.RESET_ALL}")
+        for a in apis:
+            exp_str = (
+                f"  {Fore.RED}⚠️  {a['exposed']} times with exposed credentials{Style.RESET_ALL}"
+                if a["exposed"] > 0 else ""
+            )
+            click.echo(f"    {a['name']:<16} seen in {a['scanned']} scan(s){exp_str}")
+
+    # Low precision rules (improvement candidates)
+    precision_report = get_rule_precision_report()
+    low_precision    = [r for r in precision_report if r.get("precision", 100) < 60 and r.get("fires_total", 0) >= 5]
+    if low_precision:
+        click.echo(f"\n  {Fore.YELLOW}{Style.BRIGHT}Rules with low precision (candidate for improvement):{Style.RESET_ALL}")
+        for r in low_precision[:3]:
+            click.echo(
+                f"    {Fore.YELLOW}{r['rule_id']}{Style.RESET_ALL} — "
+                f"{r['precision']:.1f}% precision over {r['fires_total']} fires"
+            )
+        click.echo(f"\n  {Fore.WHITE}Consider opening an issue: github.com/Peternasarah/permi/issues{Style.RESET_ALL}")
+
+    click.echo(f"""
+  {'─' * 60}
+  {Fore.WHITE}This data is stored only on your machine.{Style.RESET_ALL}
+  {Fore.WHITE}Nothing is shared without your explicit consent.{Style.RESET_ALL}
+  {Fore.WHITE}To delete it: del C:\\Users\\<you>\\.permi\\intelligence.db{Style.RESET_ALL}
+    """)
 
 # ── FEEDBACK COMMAND ──────────────────────────────────────────────────────────
 @cli.command()
@@ -632,3 +724,4 @@ cli.add_command(scan,     name="scan")
 cli.add_command(setup,    name="setup")
 cli.add_command(info,     name="info")
 cli.add_command(feedback, name="feedback")
+cli.add_command(stats, name="stats")

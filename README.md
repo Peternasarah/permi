@@ -4,7 +4,7 @@
 
 # Permi
 
-**AI-Powered Vulnerability Scanner for Nigerian Developers**
+**The security signal filter for African fintech engineering teams**
 
 [![PyPI version](https://badge.fury.io/py/permi.svg)](https://badge.fury.io/py/permi)
 [![Downloads](https://pepy.tech/badge/permi)](https://pepy.tech/project/permi)
@@ -16,11 +16,13 @@
 
 ## What is Permi?
 
-Permi is an AI-powered security scanner that finds real vulnerabilities in web applications and source code — and filters out the false positives that waste your time.
+Most security scanners produce hundreds of findings. Most are noise. Developers learn to ignore them — and that is when the real vulnerabilities get missed.
 
-Traditional scanners flag hundreds of issues. Most are noise. Permi uses an AI filter to confirm which findings are real before showing them to you, so you spend time fixing vulnerabilities, not chasing ghosts.
+Permi fixes this. It scans your code and live applications for vulnerabilities, then uses an AI filter to confirm which findings are real before you see them. Your team spends time fixing actual problems instead of chasing false alarms.
 
-Built from Jos, Nigeria. For Nigerian developers. Then for the world.
+Permi also includes rules built specifically for the African development context — USSD gateway vulnerabilities, Paystack and Flutterwave credential exposure, and patterns relevant to Nigeria Data Protection Act compliance. No foreign scanner prioritises this. Permi does.
+
+Built from Jos, Nigeria. For African fintech engineering teams. Then for the world.
 
 ---
 
@@ -28,7 +30,8 @@ Built from Jos, Nigeria. For Nigerian developers. Then for the world.
 
 ```bash
 pip install permi
-permi scan --url https://yoursite.com
+permi setup --community    # 50 free AI filter credits — no card needed
+permi scan --path ./myapp
 ```
 
 ---
@@ -46,7 +49,7 @@ Some Windows machines freeze immediately when running `permi` — even before th
    - `C:\Users\<yourname>\Permi\venv` (or wherever your venv lives)
 4. Open a new terminal and run `permi` again
 
-If you are on a **corporate machine or university network**, your IT department may have group policies that block Python subprocess calls. In that case, run Permi from Windows Subsystem for Linux (WSL) instead:
+If you are on a **corporate machine or university network**, your IT department may have group policies that block Python subprocess calls. Run Permi from Windows Subsystem for Linux (WSL) instead:
 
 ```bash
 wsl
@@ -67,11 +70,13 @@ Requires Python 3.9+. Works on Windows, macOS, and Linux.
 ### For JavaScript/SPA scanning (React, Vue, Angular, Next.js)
 
 ```bash
-pip install playwright
+pip install "permi[js]"
 playwright install chromium
 ```
 
-> **Note for low-RAM machines (4GB):** Use `--max-pages 10` with `--js` to keep memory usage manageable.
+> **Cloudflare-protected sites:** Also run `pip install playwright-stealth` for better rendering success rates.
+
+> **Low-RAM machines (4GB):** Use `--max-pages 10` with `--js`.
 
 ---
 
@@ -147,8 +152,18 @@ permi scan --url https://yoursite.com --output json
 
 ## Setting Up AI Filtering
 
+The AI filter is what separates confirmed vulnerabilities from noise. Without it, Permi shows all raw findings. With it, each finding is reviewed before you see it.
 
-###  Your own OpenRouter API key (unlimited)
+### Option 1 — Free community credits (recommended for new users)
+
+```bash
+permi setup --community
+```
+
+50 free AI filter calls. No credit card. Starts immediately.
+The community proxy may take up to 60 seconds to wake on first use — it retries automatically.
+
+### Option 2 — Your own OpenRouter API key (unlimited)
 
 ```bash
 permi setup --api-key YOUR_KEY
@@ -160,7 +175,7 @@ Get a free key at [openrouter.ai](https://openrouter.ai).
 
 ## GitHub Action — Scan Every Pull Request
 
-Add Permi to your CI/CD pipeline so every pull request is automatically scanned. Findings are posted as a PR comment and the merge is blocked if high severity issues are found.
+Add Permi to your CI/CD pipeline. Every pull request is automatically scanned, findings are posted as PR comments, and merges are blocked if high severity issues are found.
 
 ```yaml
 # .github/workflows/security.yml
@@ -189,11 +204,11 @@ jobs:
 ```
 
 **What happens on every PR:**
-
 - Permi scans the changed code
 - AI filter removes false positives
 - Findings posted as a PR comment
 - Merge blocked if high severity issues found
+- Free forever
 
 **[→ View Permi GitHub Action on the Marketplace](https://github.com/marketplace/actions/permi-security-scanner)**
 
@@ -202,22 +217,22 @@ jobs:
 ## How It Works
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────────┐
-│   Crawler   │───▶│    Scanner   │───▶│  AI Filter  │───▶│   Results    │
-│ HTTP or JS  │    │ SQL · XSS    │    │ Real vs FP  │    │ Confirmed    │
-│  (--js)     │    │ Headers · + │    │ 78% noise   │    │ findings     │
-└─────────────┘    └──────────────┘    │ reduction   │    └──────────────┘
-                                       └─────────────┘
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Crawler   │───▶│    Scanner   │───▶│  AI Filter   │───▶│   Results    │
+│ HTTP or JS  │    │ SQL · XSS    │    │ Confirms or  │    │ Only real    │
+│  (--js)     │    │ Secrets · +  │    │ dismisses    │    │ findings     │
+└─────────────┘    └──────────────┘    │ each finding │    └──────────────┘
+                                       └──────────────┘
 ```
 
 **Two crawler modes:**
 - **HTTP mode** (default) — fast BeautifulSoup crawler for server-rendered sites
 - **JS mode** (`--js`) — Playwright headless Chromium for React/Vue/Angular SPAs
 
-**AI filter features:**
-- Confirms or dismisses each finding individually
-- CSP-aware: knows when a reflected XSS cannot execute due to Content-Security-Policy
-- Caches results to save API credits on repeated scans
+**AI filter:**
+- Reviews each finding individually before it reaches you
+- CSP-aware: correctly dismisses reflected XSS when a Content-Security-Policy blocks execution
+- Caches results so repeated scans do not consume extra credits
 - Three-tier verdict: REAL / REVIEW / FP with confidence score 0-100
 - Community proxy for users without their own API key
 
@@ -230,9 +245,9 @@ jobs:
 | Category | What is detected |
 |----------|-----------------|
 | SQL Injection | Error-based, Boolean-based blind, Time-based blind |
-| Cross-Site Scripting | Reflected XSS across all parameters |
+| Cross-Site Scripting | Reflected XSS — HTML-encoding aware, CSP-aware |
 | Missing Security Headers | CSP, HSTS, X-Frame-Options, Permissions-Policy |
-| Server Information Disclosure | Server header, X-Powered-By version leakage |
+| Server Version Disclosure | Server and X-Powered-By version number leakage |
 
 ### Source code scanning (`--path`)
 
@@ -246,15 +261,14 @@ jobs:
 
 ---
 
-## Nigerian-Specific Rules
+## Nigerian and African-Specific Rules
 
-Permi includes rules built specifically for the Nigerian development context:
+Permi includes rules built for the African development context that no global tool will ever prioritise:
 
 - **USSD gateway vulnerabilities** — unvalidated sessionId, phoneNumber, serviceCode
-- **Paystack and Flutterwave key exposure** — detects Nigerian payment gateway secrets
-- **NDPR-relevant patterns** — helps with Nigeria Data Protection Act compliance
-
-No foreign scanner understands this market the way Permi does.
+- **Paystack and Flutterwave key exposure** — detects Nigerian payment gateway live secrets
+- **BVN and NIN pattern detection** — NDPA-sensitive personal data in code
+- **NDPA-relevant patterns** — helps with Nigeria Data Protection Act compliance
 
 ---
 
@@ -263,17 +277,17 @@ No foreign scanner understands this market the way Permi does.
 ```
 [Permi] Mode     : JS scan (Playwright headless browser)
 [Permi] Target   : https://yourapp.com
-[Permi] Crawl    : up to 30 pages (JS-rendered)
+[Permi] Crawl    : up to 15 pages (JS-rendered)
 
-[Permi JS] Rendering page 1/30: https://yourapp.com
-[Permi JS] Rendering page 2/30: https://yourapp.com/login
+[Permi JS] Rendering page 1/15: https://yourapp.com
+[Permi JS] Rendering page 2/15: https://yourapp.com/login
 [Permi JS] Crawl complete — 8 pages rendered, 24 URLs found, 12 unique signatures
 
 [Permi] Engine found 7 raw finding(s)
 [Permi] Running AI filter on 7 finding(s)...
 
 ════════════════════════════════════════════════════════════════════════
-  AI FILTER SUMMARY
+  FILTER SUMMARY
 ════════════════════════════════════════════════════════════════════════
   Raw findings     : 7
   Confirmed real   : 4
@@ -307,6 +321,7 @@ No foreign scanner understands this market the way Permi does.
 ```
 permi scan --url URL             Scan a live website
   --js                           Use Playwright for JS-rendered SPAs
+  --js-timeout N                 Per-page timeout in seconds (default: 20)
   --include-subdomains           Also scan subdomains
   --max-pages N                  Max pages to crawl (default: 30)
   --severity LEVEL               high | medium | low | all (default: all)
@@ -320,7 +335,8 @@ permi scan --path PATH           Scan local codebase or GitHub repo
   --output FORMAT                human | json
   --export FILE                  Export full report
 
-permi setup --api-key KEY        Use your own OpenRouter API key
+permi setup --community          Register for 50 free AI filter credits
+permi setup --api-key KEY        Use your own OpenRouter API key (unlimited)
 permi info                       Show config, credits, Playwright status
 permi feedback                   Share feedback with the Permi team
 ```
@@ -329,7 +345,7 @@ permi feedback                   Share feedback with the Permi team
 
 ## CI/CD Integration
 
-Permi exits with code `1` if any HIGH severity findings are confirmed. Use this in any pipeline:
+Permi exits with code `1` if any HIGH severity findings are confirmed after filtering. Use this in any pipeline:
 
 ```yaml
 # GitHub Actions — inline (without the Marketplace Action)
@@ -349,32 +365,33 @@ permi scan --path ./myapp --severity high || exit 1
 
 ## Changelog
 
-### v0.2.13 — JS/SPA Support + GitHub Action
-- **NEW:** `--js` flag for JavaScript-rendered applications (React, Vue, Angular, Next.js, Nuxt)
-- **NEW:** Playwright headless browser integration via `scanner/js_crawler.py`
-- **NEW:** Network interception — discovers XHR/fetch API endpoints automatically
-- **NEW:** Search box interaction — fills and submits search inputs to reveal parameterised URLs
-- **NEW:** Clear SPA detection warning with exact `--js` command shown to user
-- **NEW:** `permi info` now shows Playwright installation status
-- **NEW:** [Permi GitHub Action](https://github.com/marketplace/actions/permi-security-scanner) — scan every PR automatically
-- **NEW:** Windows antivirus freeze detection and guidance
+### v0.2.17 — Precision improvements
+- **FIX:** Windows Defender freeze — DB path now resolves lazily, not at import time
+- **FIX:** XSS false positives — proper HTML entity encoding check before flagging
+- **FIX:** Boolean SQLi false positives — both responses must exceed 2000 bytes
+- **FIX:** Time-based SQLi — requires minimum 8s hard threshold, not just baseline + 4s
+- **FIX:** Tracking parameters (utm_*, ref_*, locale) now fully skipped in all scanners
+- **NEW:** Progress indicator during web scan — scan never looks frozen
+- **NEW:** `pip install "permi[js]"` installs Playwright dependencies automatically
+- **NEW:** `permi info` shows playwright-stealth installation status
 
-### v0.2.13 — Accuracy & Speed
-- **FIX:** CSP-aware XSS analysis — AI now correctly dismisses reflected XSS blocked by CSP
-- **FIX:** Concurrent scanning — SQL and XSS run in parallel per URL via `asyncio.gather()` (~50% speed improvement)
-- **FIX:** URL deduplication — same endpoint scanned only once
-- **FIX:** Boolean SQL threshold raised; known redirect-page sizes filtered
-- **FIX:** Time-based SQL reduced to MySQL SLEEP only; 10s hard cap; 6s threshold
-- **NEW:** Scan timer — total scan duration shown in summary
+### v0.2.13 — JS/SPA Support + GitHub Action
+- **NEW:** `--js` flag for JavaScript-rendered applications (React, Vue, Angular, Next.js)
+- **NEW:** Playwright headless browser integration with stealth mode
+- **NEW:** Network interception — discovers XHR/fetch API endpoints automatically
+- **NEW:** SPA detection warning with exact re-run command shown to user
+- **NEW:** [Permi GitHub Action](https://github.com/marketplace/actions/permi-security-scanner)
+- **NEW:** Windows antivirus freeze detection and guidance
+- **NEW:** Scan timer — total duration shown at end of every scan
 
 ### v0.2.2 — AI Filter + Community Proxy
-- AI false-positive filter with 78% noise reduction
-- Three-tier verdict: REAL / REVIEW / FP with 0-100 confidence score
-- OpenRouter API key support with priority chain
-- Fix templates — inline remediation per finding
+- Precision filter with three-tier verdict: REAL / REVIEW / FP with 0–100 confidence score
+- Community proxy — 50 free credits with `permi setup --community`
+- OpenRouter API key support
+- Inline fix templates — exact remediation per finding
 - `--export` flag — save full reports as .txt, .json, or .md
-- `--include-subdomains` flag for subdomain-aware web scanning
-- Feedback system — `permi feedback` submits to Google Forms
+- `--include-subdomains` flag
+- Feedback system — `permi feedback`
 
 ### v0.1 — Foundation
 - CLI scanner (web + static analysis)
@@ -386,9 +403,9 @@ permi scan --path ./myapp --severity high || exit 1
 
 ## Contributing
 
-Pull requests welcome. Please open an issue first to discuss what you want to change.
+Pull requests welcome. Please open an issue first to discuss significant changes.
 
-If you find a vulnerability in a real Nigerian application using Permi, consider reporting it responsibly to the affected organisation before disclosing publicly.
+If you find a vulnerability in a real application using Permi, please report it responsibly to the affected organisation before disclosing publicly. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, including how to write new vulnerability rules.
 
 ---
 
