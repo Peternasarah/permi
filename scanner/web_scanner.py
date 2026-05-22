@@ -1,14 +1,9 @@
 # scanner/web_scanner.py
 # Web vulnerability scanner — HTTP-based and JS-based active scanning engine.
-# Handles: SQL injection, XSS, security headers, info gathering, crawling.
+# Handles: SQL injection (error, boolean, time, union), XSS, security headers, info gathering, crawling.
 # Used by: permi scan --url https://target.com
 #
-# v0.2.17 changes:
-#   - Expanded LIKELY_NON_REFLECTIVE_PARAMS to include all utm_*, ref_*, locale
-#   - Improved XSS _is_reflected_unencoded — proper HTML entity encoding check
-#   - Raised Boolean SQLi threshold: min 500 byte diff AND both responses > 2000 bytes
-#   - Time-based SQLi now requires minimum 8s AND > baseline + 4s (not just > baseline + 4s)
-#   - HeadersScanner: Server header only flagged if version number disclosed
+
 
 from __future__ import annotations
 
@@ -16,7 +11,7 @@ import asyncio
 import socket
 import time
 import hashlib
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple, Optional
 from urllib.parse import urlparse, urljoin, parse_qs
 from collections import deque
 from datetime import datetime
@@ -27,7 +22,7 @@ from bs4 import BeautifulSoup
 
 # ── USER AGENT ────────────────────────────────────────────────────────────────
 USER_AGENT = (
-    "Permi Security Scanner/0.2 "
+    "Permi Security Scanner/0.5 "
     "(github.com/Peternasarah/permi; authorized security testing only)"
 )
 
@@ -59,6 +54,11 @@ SQL_PAYLOADS = {
     "time_based": [
         "'; SELECT SLEEP(5)--",
         "1' AND SLEEP(5)--",
+    ],
+    "union_based": [
+        "' UNION SELECT NULL--",
+        "' UNION SELECT NULL,NULL--",
+        "' UNION SELECT NULL,NULL,NULL--",
     ],
 }
 
@@ -106,8 +106,15 @@ LIKELY_NON_REFLECTIVE_PARAMS = {
     "mc_cid", "mc_eid",
     # Auth / CSRF — sensitive but not injection vectors
     "next", "redirect", "redirect_to", "return", "callback",
-    "state", "nonce", "csrf", "_token",
+    "state", "nonce", "csrf", "token", "_token",
 }
+
+# ── SPA FRAMEWORK SIGNATURES ──────────────────────────────────────────────────
+JS_FRAMEWORK_SIGNATURES = [
+    "react", "vue", "angular", "svelte", "next", "nuxt", "remix",
+    "ng-version", "__next", "__nuxt", "data-reactroot",
+    "app.bundle.js", "main.chunk.js", "runtime.js",
+]
 
 
 # ── DOMAIN HELPERS ────────────────────────────────────────────────────────────
@@ -136,19 +143,16 @@ def _is_same_scope(url: str, base_domain: str, include_subdomains: bool) -> bool
     return netloc == base_domain
 
 
-def _is_likely_spa(html: str, soup) -> bool:
+def _detect_spa(html: str) -> bool:
     """Heuristic: is this a JavaScript-rendered single-page application?"""
-    text  = html.lower()
-    links = len(soup.find_all("a", href=True))
-    is_short_with_few_links = len(html) > 5000 and links < 3
-    has_spa_markers = (
-        "data-reactroot" in text
-        or "__next_data__" in text
-        or "ng-version" in text
-        or "data-v-app" in text
-        or "__nuxt" in text
-    )
-    return is_short_with_few_links or has_spa_markers
+    lower = html.lower()
+    # Signature-based: count framework markers
+    sig_count = sum(1 for s in JS_FRAMEWORK_SIGNATURES if s in lower)
+    if sig_count >= 2:
+        return True
+    # Heuristic: large page with very few links
+    soup = BeautifulSoup(html, "html.parser")
+    return len(html) > 5000 and len(soup.find_all("a", href=True)) < 3
 
 
 def _dedup_urls(urls) -> List[str]:
@@ -159,6 +163,8 @@ def _dedup_urls(urls) -> List[str]:
     seen = set()
     out  = []
     for url in urls:
+        if "?" not in url:
+            continue
         p   = urlparse(url)
         key = (p.netloc, p.path, frozenset(parse_qs(p.query).keys()))
         if key not in seen:
@@ -191,6 +197,7 @@ class SQLInjectionScanner:
             findings.extend(await self._test_error_based(base_url, param, original, params))
             findings.extend(await self._test_boolean_based(base_url, param, original, params))
             findings.extend(await self._test_time_based(base_url, param, original, params))
+            findings.extend(await self._test_union_based(base_url, param, original, params))
 
         return findings
 
@@ -356,6 +363,71 @@ class SQLInjectionScanner:
             pass
         return findings
 
+    async def _test_union_based(self, base_url, param, value, params):
+        """Test for UNION-based SQL injection by checking for extra columns in response."""
+        findings = []
+        try:
+            baseline = await self.client.get(base_url, params=params, timeout=10)
+            baseline_text = baseline.text
+
+            for payload in SQL_PAYLOADS["union_based"]:
+                test_params        = {k: v for k, v in params.items()}
+                test_params[param] = [value + payload]
+                try:
+                    response = await self.client.get(base_url, params=test_params, timeout=10)
+                    response_text = response.text
+
+                    # Union-based SQLi often changes the response structure significantly
+                    # or introduces NULL values that change the page rendering
+                    # We look for significant size changes or structural differences
+                    baseline_len = len(baseline_text)
+                    response_len = len(response_text)
+
+                    # Skip if either is a known false-positive size
+                    if baseline_len in KNOWN_FP_SIZES or response_len in KNOWN_FP_SIZES:
+                        continue
+                    if baseline_len < MIN_BOOLEAN_RESPONSE_BYTES or response_len < MIN_BOOLEAN_RESPONSE_BYTES:
+                        continue
+
+                    # Look for significant structural change
+                    if abs(response_len - baseline_len) > 500:
+                        # Additional check: look for common UNION indicators
+                        union_indicators = [
+                            "null", "NULL", "unknown column", "operand should contain",
+                            "the used select statements have a different number of columns",
+                        ]
+                        has_union_error = any(ind in response_text.lower() for ind in union_indicators)
+
+                        if has_union_error or response_len > baseline_len + 500:
+                            findings.append({
+                                "rule_id":        "WEB_SQL004",
+                                "rule_name":      "SQL Injection — Union-based",
+                                "severity":       "high",
+                                "description":    (
+                                    f"Parameter '{param}' produced a significantly different "
+                                    f"response when a UNION SELECT payload was injected. "
+                                    f"This suggests the application may be vulnerable to "
+                                    f"UNION-based SQL injection, allowing data extraction."
+                                ),
+                                "file":           base_url,
+                                "line_number":    0,
+                                "line_content":   f"?{param}={value}{payload}",
+                                "parameter":      param,
+                                "payload":        payload,
+                                "evidence":       (
+                                    f"Baseline: {baseline_len}b, UNION: {response_len}b. "
+                                    f"Union error indicator: {has_union_error}"
+                                ),
+                                "ai_verdict":     None,
+                                "ai_explanation": None,
+                            })
+                            return findings
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return findings
+
 
 # ── XSS SCANNER ───────────────────────────────────────────────────────────────
 class XSSScanner:
@@ -482,14 +554,13 @@ class XSSScanner:
 
 # ── SECURITY HEADERS SCANNER ──────────────────────────────────────────────────
 class HeadersScanner:
-    async def test_url(self, url: str, client: httpx.AsyncClient) -> List[Dict]:
-        findings = []
+    async def test_url(self, url: str, client: httpx.AsyncClient) -> Tuple[List[Dict], Optional[str]]:
+        findings: List[Dict] = []
+        csp_value: Optional[str] = None
         try:
             response = await client.get(url, timeout=10)
             headers  = {k.lower(): v for k, v in response.headers.items()}
-
-            # Extract CSP for XSS scanner
-            csp_value = headers.get("content-security-policy", "")
+            csp_value = headers.get("content-security-policy", None)
 
             missing = [h for h in SECURITY_HEADERS if h.lower() not in headers]
             if missing:
@@ -533,7 +604,7 @@ class HeadersScanner:
 
         except Exception:
             pass
-        return findings, (headers.get("content-security-policy", "") if 'headers' in dir() else "")
+        return findings, csp_value
 
 
 # ── INFO GATHERING ────────────────────────────────────────────────────────────
@@ -557,6 +628,7 @@ class InfoGatherer:
             info["https"]       = url.startswith("https://")
         except Exception as e:
             info["error"] = str(e)
+            info["https"] = url.startswith("https://")
 
         return info
 
@@ -575,10 +647,11 @@ class WebCrawler:
         netloc           = urlparse(base_url).netloc.split(":")[0].lower()
         self.base_domain = _extract_base_domain(netloc)
 
-    async def crawl(self, client: httpx.AsyncClient) -> Set[str]:
+    async def crawl(self, client: httpx.AsyncClient) -> Tuple[Set[str], bool]:
         visited    = set()
         to_visit   = deque([self.base_url])
         discovered = set([self.base_url])
+        is_spa     = False
 
         scope_msg = (
             f"subdomain-aware ({self.base_domain} + subdomains)"
@@ -594,8 +667,14 @@ class WebCrawler:
             visited.add(url)
 
             try:
-                response = await client.get(url, timeout=10)
-                soup     = BeautifulSoup(response.text, "html.parser")
+                response = await asyncio.wait_for(client.get(url, timeout=10), timeout=12.0)
+                html     = response.text
+
+                # SPA detection on base URL
+                if not is_spa and url == self.base_url:
+                    is_spa = _detect_spa(html)
+
+                soup = BeautifulSoup(html, "html.parser")
 
                 for tag in soup.find_all(["a", "form"]):
                     href = tag.get("href") or tag.get("action", "")
@@ -610,12 +689,32 @@ class WebCrawler:
                         discovered.add(full)
                         to_visit.append(full)
 
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.2)
 
             except Exception:
                 continue
 
-        return discovered
+        return discovered, is_spa
+
+
+# ── PARALLEL SCAN HELPER ────────────────────────────────────────────────────
+async def _scan_single_url(
+    target_url: str,
+    sql_scanner: SQLInjectionScanner,
+    xss_scanner: XSSScanner,
+    csp_value: Optional[str],
+) -> List[Dict]:
+    """Run SQL and XSS scans concurrently for a single URL."""
+    results = await asyncio.gather(
+        asyncio.wait_for(sql_scanner.test_url(target_url), timeout=45.0),
+        asyncio.wait_for(xss_scanner.test_url(target_url, csp=csp_value), timeout=30.0),
+        return_exceptions=True,
+    )
+    findings = []
+    for r in results:
+        if not isinstance(r, Exception):
+            findings.extend(r)
+    return findings
 
 
 # ── MAIN WEB SCAN ORCHESTRATOR ────────────────────────────────────────────────
@@ -625,7 +724,7 @@ async def _run_web_scan(
     include_subdomains: bool = False,
     use_js:             bool = False,
     page_timeout_ms:    int  = 20000,
-) -> tuple[List[Dict], Dict]:
+) -> Tuple[List[Dict], Dict]:
     """Full web scan pipeline. Returns: (findings, info)"""
 
     scan_start = time.time()
@@ -634,7 +733,7 @@ async def _run_web_scan(
         headers={"User-Agent": USER_AGENT},
         follow_redirects=True,
         verify=False,
-        timeout=15,
+        timeout=httpx.Timeout(connect=6.0, read=12.0, write=6.0, pool=5.0),
     ) as client:
 
         all_findings: List[Dict] = []
@@ -642,6 +741,14 @@ async def _run_web_scan(
         # Info gathering
         gatherer = InfoGatherer()
         info     = await gatherer.gather(url, client)
+
+        # ── Security headers on main URL ──────────────────────────────────────
+        header_scanner = HeadersScanner()
+        header_findings, csp_value = await header_scanner.test_url(url, client)
+        all_findings.extend(header_findings)
+
+        if csp_value:
+            print("[Permi] CSP detected — XSS findings will include CSP context for accurate AI analysis.")
 
         # ── JS crawl ──────────────────────────────────────────────────────────
         if use_js:
@@ -651,13 +758,38 @@ async def _run_web_scan(
                 base_url           = url,
                 max_pages          = min(max_pages, 15),  # community limit
                 include_subdomains = include_subdomains,
+                max_minutes        = 5,
                 page_timeout_ms    = page_timeout_ms,
             )
-            unique_parameterised, api_endpoints, all_urls_js = await js_crawler.crawl()
-            all_urls = set(unique_parameterised) | set(api_endpoints)
-            info["urls_discovered"] = len(all_urls_js) if all_urls_js else len(all_urls)
+            crawl_result = await js_crawler.crawl()
+
+            # BULLETPROOF: Handle any return format from js_crawler
+            unique_parameterised = []
+            api_endpoints        = []
+            all_urls_js          = set()
+
+            if isinstance(crawl_result, tuple):
+                if len(crawl_result) >= 3:
+                    # Format: (unique, api_endpoints, all_urls_or_flag)
+                    if isinstance(crawl_result[0], list):
+                        unique_parameterised = crawl_result[0]
+                    if isinstance(crawl_result[1], list):
+                        api_endpoints = crawl_result[1]
+                    # 3rd element could be all_urls (set) or True (bool)
+                    if len(crawl_result) >= 3 and isinstance(crawl_result[2], (set, list)):
+                        all_urls_js = set(crawl_result[2])
+                elif len(crawl_result) == 2:
+                    # Format: (unique, api_endpoints)
+                    if isinstance(crawl_result[0], list):
+                        unique_parameterised = crawl_result[0]
+                    if isinstance(crawl_result[1], list):
+                        api_endpoints = crawl_result[1]
+
+            all_urls = set(unique_parameterised + api_endpoints) | all_urls_js
+            info["urls_discovered"] = len(all_urls)
+            pages_rendered = getattr(js_crawler, 'pages_rendered', len(unique_parameterised))
             print(
-                f"[Permi JS] Crawl complete — {js_crawler.pages_rendered} pages rendered, "
+                f"[Permi JS] Crawl complete — {pages_rendered} pages rendered, "
                 f"{len(all_urls)} URLs found, "
                 f"{len(unique_parameterised)} unique parameter signatures to test"
             )
@@ -666,34 +798,22 @@ async def _run_web_scan(
         else:
             info["scan_mode"] = "http"
             crawler  = WebCrawler(url, max_pages=max_pages, include_subdomains=include_subdomains)
-            all_urls = await crawler.crawl(client)
+            all_urls, is_spa = await crawler.crawl(client)
 
-            # SPA detection
-            try:
-                resp = await client.get(url, timeout=10)
-                soup = BeautifulSoup(resp.text, "html.parser")
-                if _is_likely_spa(resp.text, soup):
-                    print(
-                        f"\n[Permi] ⚠️  JavaScript-rendered application detected.\n"
-                        f"[Permi]    Re-run with --js to scan the full content:\n"
-                        f"[Permi]      permi scan --url {url} --js\n"
-                    )
-            except Exception:
-                pass
+            if is_spa and len([u for u in all_urls if "?" in u]) == 0:
+                print()
+                print("[Permi] ⚠️  JavaScript-rendered application detected.")
+                print(f"[Permi]    Crawler found {len(all_urls)} URL(s) but 0 with parameters to test.")
+                print("[Permi]    This site renders content with React, Vue, or Angular.")
+                print("[Permi]    The HTTP crawler cannot see JavaScript-rendered links and forms.")
+                print("[Permi]    Header findings below are still accurate and complete.")
+                print("[Permi]    Re-run with --js to scan the full JavaScript-rendered content:")
+                print(f"[Permi]      permi scan --url {url} --js")
+                print()
 
             # Print progress before testing
             unique_parameterised = _dedup_urls([u for u in all_urls if "?" in u])
             print(f"[Permi] {len(all_urls)} URLs discovered → {len(unique_parameterised)} unique parameter signatures to test")
-
-        # ── Security headers on main URL ──────────────────────────────────────
-        header_scanner  = HeadersScanner()
-        result = await header_scanner.test_url(url, client)
-        # Handle both old and new return format
-        if isinstance(result, tuple):
-            header_findings, csp_value = result
-        else:
-            header_findings, csp_value = result, ""
-        all_findings.extend(header_findings)
 
         # ── SQL + XSS on parameterised URLs ───────────────────────────────────
         sql_scanner = SQLInjectionScanner(client)
@@ -706,28 +826,17 @@ async def _run_web_scan(
             short = (target_url[:70] + "...") if len(target_url) > 70 else target_url
             print(f"[Permi] Testing {i}/{total}: {short}", flush=True)
             try:
-                sql_results = await asyncio.wait_for(
-                    sql_scanner.test_url(target_url),
-                    timeout=25.0,
+                findings = await asyncio.wait_for(
+                    _scan_single_url(target_url, sql_scanner, xss_scanner, csp_value),
+                    timeout=60.0,
                 )
-                all_findings.extend(sql_results)
+                all_findings.extend(findings)
             except asyncio.TimeoutError:
-                print(f"[Permi] Timeout on SQL scan: {short[:60]} — skipping")
+                print(f"[Permi] Timeout on scan: {short[:60]} — skipping")
             except Exception:
                 pass
 
-            try:
-                xss_results = await asyncio.wait_for(
-                    xss_scanner.test_url(target_url, csp=csp_value),
-                    timeout=25.0,
-                )
-                all_findings.extend(xss_results)
-            except asyncio.TimeoutError:
-                print(f"[Permi] Timeout on XSS scan: {short[:60]} — skipping")
-            except Exception:
-                pass
-
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.15)
 
     # ── Deduplication ─────────────────────────────────────────────────────────
     # Same (url, parameter, rule_id) should only appear once.
@@ -744,7 +853,7 @@ async def _run_web_scan(
             deduped.append(f)
 
     # ── Scan timer ────────────────────────────────────────────────────────────
-    elapsed_secs        = int(time.time() - scan_start)
+    elapsed_secs = int(time.time() - scan_start)
     info["scan_duration"] = f"{elapsed_secs // 60}m {elapsed_secs % 60}s" if elapsed_secs >= 60 else f"{elapsed_secs}s"
     info["urls_discovered"] = info.get("urls_discovered", len(all_urls))
     info["urls_tested"]     = len(param_urls)
@@ -758,7 +867,7 @@ def scan_url(
     include_subdomains: bool = False,
     use_js:             bool = False,
     page_timeout_ms:    int  = 20000,
-) -> tuple[List[Dict], Dict]:
+) -> Tuple[List[Dict], Dict]:
     """
     Synchronous entry point for web scanning.
     Called by cli/main.py when --url flag is used.

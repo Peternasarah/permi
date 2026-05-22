@@ -1,4 +1,5 @@
-# scanner/js_crawler.py 
+# scanner/js_crawler.py  — v0.3
+#
 
 
 from __future__ import annotations
@@ -81,7 +82,7 @@ def _form_to_url(action: str, inputs: List[Dict], base_url: str) -> Optional[str
     return f"{full_action}?{urlencode(params)}"
 
 
-# ── STATIC FALLBACK ─────────────────────────────────────────────────
+# ── CHANGE 2: STATIC FALLBACK ─────────────────────────────────────────────────
 def _static_fallback(
     url:               str,
     base_domain:       str,
@@ -372,7 +373,7 @@ async def _async_crawl(
         if not _has_stealth:
             print("[Permi JS] Install playwright-stealth: pip install playwright-stealth")
 
-    return unique, api_endpoints
+    return unique, api_endpoints, discovered_urls
 
 
 # ── JSCrawler ─────────────────────────────────────────────────────────────────
@@ -397,6 +398,7 @@ class JSCrawler:
         self.include_subdomains = include_subdomains
         self.max_minutes        = max_minutes
         self.page_timeout_ms    = page_timeout_ms
+        self.pages_rendered     = 0
 
     async def crawl(self) -> Tuple[List[str], List[str], bool]:
         import threading
@@ -424,7 +426,7 @@ class JSCrawler:
             print(f"[Permi JS]    Cannot start JS scan — site may be offline.")
             print(f"[Permi JS]    Tip: try again in a few minutes, or scan without --js")
             print(f"[Permi JS]    Returning header findings only.")
-            return [], [], True
+            return [], [], set()
         # ──────────────────────────────────────────────────────────────────────
 
         # stop_flag: set() by crawl() when it stops waiting for the thread.
@@ -470,7 +472,13 @@ class JSCrawler:
         # daemon=True: Python won't wait 300s for the thread on shutdown
         t = threading.Thread(target=_run, daemon=True)
         t.start()
-        t.join(timeout=max_seconds)
+
+        # FIX: use run_in_executor so t.join() does NOT block the asyncio event
+        # loop. Calling t.join() directly inside an async def corrupts event loop
+        # state, causing asyncio.run() in scan_url() to return a bool instead of
+        # (findings, info) — producing "object of type 'bool' has no len()".
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: t.join(max_seconds))
 
         # Signal the thread to stop printing — whether it finished or timed out
         stop_flag.set()
@@ -480,18 +488,18 @@ class JSCrawler:
             print(f"\n[Permi JS] ⚠️  Hard cap reached ({self.max_minutes} min).")
             print(f"[Permi JS]    Continuing with header findings collected so far.")
             print(f"[Permi JS]    Try --max-pages 5 to scan faster next time.")
-            return [], [], True
+            return [], [], set()
 
         if error_holder[0]:
             print(f"\n[Permi JS] Browser error: {type(error_holder[0]).__name__}: {error_holder[0]}")
             print("[Permi JS]    Continuing with header findings only.")
-            return [], [], True
+            return [], [], set()
 
         if result_holder[0] is None:
-            return [], [], True
+            return [], [], set()
 
-        unique, api_endpoints = result_holder[0]
-        return unique, api_endpoints, True
+        unique, api_endpoints, all_discovered = result_holder[0]
+        return unique, api_endpoints, all_discovered
 
 
 # ── INSTALL GUIDES ────────────────────────────────────────────────────────────

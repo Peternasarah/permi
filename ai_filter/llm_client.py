@@ -269,13 +269,18 @@ def analyse(finding: dict) -> dict:
         finding["ai_backend"]     = cached.get("backend", "cache")
         return finding
 
-    api_key = get_api_key()
     token   = get_community_token()
+    api_key = get_api_key() if not token else None
 
-    if api_key:
-        result = _analyse_direct(finding, api_key)
-    elif token:
+    # Priority: community token > personal API key.
+    # If the user ran `permi setup --community`, use the proxy.
+    # Only fall back to API key if no community token is configured.
+    # This prevents the .env file from silently overriding a community setup.
+
+    if token:
         result = _analyse_proxy(finding, token)
+    elif api_key:
+        result = _analyse_direct(finding, api_key)
     else:
         finding["ai_verdict"]     = "AI_UNAVAILABLE"
         finding["ai_confidence"]  = None

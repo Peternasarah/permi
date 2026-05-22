@@ -285,6 +285,9 @@ def scan(url, path, output, severity, offline, project,
                 page_timeout_ms    = js_timeout * 1000,
             )
 
+            if not isinstance(raw_findings, list):
+                raw_findings = []
+
             _elapsed = time.time() - _t0
             _mins    = int(_elapsed // 60)
             _secs    = int(_elapsed % 60)

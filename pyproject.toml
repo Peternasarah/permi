@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "permi"
-version = "0.2.19"
+version = "0.3.0"
 description = "The security signal filter for African fintech engineering teams — precision-first AppSec that removes false positives so developers only see findings that matter"
 readme = "README.md"
 requires-python = ">=3.9"
