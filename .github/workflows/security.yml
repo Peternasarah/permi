@@ -1,8 +1,6 @@
 name: Security Scan
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -12,10 +10,11 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
       - uses: Peternasarah/permi-action@v1
         with:
           severity: high
           openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-          token: ${{ github.token }}  # Add this
