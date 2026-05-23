@@ -128,7 +128,7 @@ permi scan --url https://yoursite.com --include-subdomains
 permi scan --url https://yoursite.com --severity high
 ```
 
-### Export results to a file
+### Export results to a file.
 
 ```bash
 permi scan --url https://yoursite.com --export report.md
