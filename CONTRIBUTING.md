@@ -84,18 +84,11 @@ pip install -e .
 echo OPENROUTER_API_KEY=your-key-here > .env
 
 # 6. Verify the setup works
-permi scan --path ./test_project --offline
+permi scan ./test_project --offline
 ```
 
 You should see Permi scan the test project and print findings. If it does,
 your development environment is ready.
-
-### Optional — JavaScript scanning
-
-```bash
-pip install playwright playwright-stealth
-playwright install chromium
-```
 
 ---
 
@@ -124,10 +117,10 @@ Keep changes focused. One branch = one logical change.
 **4. Test your changes**
 ```bash
 # Run a scan against the test project
-permi scan --path ./test_project
+permi scan ./test_project
 
 # Run in offline mode (no API calls)
-permi scan --path ./test_project --offline
+permi scan ./test_project --offline
 
 # If you added new rules, add a test case to test_project/
 # that triggers them and verify they are caught
@@ -259,7 +252,7 @@ Optional longer explanation if the change is not self-evident.
 
 ```
 feat(rules): add Paystack secret key detection rule SEC004
-fix(web_scanner): skip tracking params to reduce XSS false positives
+fix(scanner): reduce SQL rule false positives on ORM query builders
 docs(readme): add Windows Defender freeze fix instructions
 refactor(db): make DB_PATH lazy to fix Windows startup freeze
 ```
@@ -276,7 +269,7 @@ A good pull request:
 - **Includes a test** — if you added a rule, add a code example to
   `test_project/` that triggers it
 - **Does not break existing behaviour** — run
-  `permi scan --path ./test_project --offline` and confirm findings appear
+  `permi scan ./test_project --offline` and confirm findings appear
 
 ---
 

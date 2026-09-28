@@ -50,7 +50,7 @@ body:
       label: What happened?
       description: A clear description of the bug. What did you expect to happen? What actually happened?
       placeholder: |
-        I ran `permi scan --path ./myapp` and expected to see findings for SQL injection
+        I ran `permi scan ./myapp` and expected to see findings for SQL injection
         in auth.py, but Permi reported zero findings despite the file containing a clear
         string concatenation query on line 42.
     validations:
@@ -63,7 +63,7 @@ body:
       description: Exact steps to reproduce the bug. Include the full command you ran.
       placeholder: |
         1. Create a file `test.py` with content: `cursor.execute("SELECT * FROM users WHERE name = " + username)`
-        2. Run: `permi scan --path . --offline`
+        2. Run: `permi scan . --offline`
         3. Observe: zero findings reported
     validations:
       required: true

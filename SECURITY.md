@@ -63,7 +63,6 @@ we will discuss an extended timeline with you.
 - **Scanner engine** — rule bypass, malicious input handling, regex DoS
 - **AI filter** — prompt injection that causes systematically incorrect verdicts
 - **Database layer** — data leakage between projects, path traversal in DB path
-- **Web scanner** — SSRF via crafted target URLs, unintended scanning of out-of-scope hosts
 - **GitHub Action** — action injection, secret exposure in logs, GITHUB_TOKEN misuse
 - **Community proxy** — token forgery, credit bypass, rate limit evasion
 - **Dependency vulnerabilities** — known CVEs in Permi's dependencies
@@ -76,8 +75,6 @@ we will discuss an extended timeline with you.
 - Social engineering attacks
 - Theoretical vulnerabilities with no practical exploit path
 - Findings from automated scanners run against Permi without manual verification
-- The fact that Permi uses `verify=False` in httpx for web scanning —
-  this is intentional and documented; Permi is the client, not a server
 
 ---
 

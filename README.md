@@ -18,7 +18,7 @@
 
 Most security scanners produce hundreds of findings. Most are noise. Developers learn to ignore them — and that is when the real vulnerabilities get missed.
 
-Permi fixes this. It scans your code and live applications for vulnerabilities, then uses an AI filter to confirm which findings are real before you see them. Your team spends time fixing actual problems instead of chasing false alarms.
+Permi fixes this. It scans your codebase for vulnerabilities, then uses an AI filter to confirm which findings are real before you see them. Your team spends time fixing actual problems instead of chasing false alarms.
 
 Permi also includes rules built specifically for the African development context — USSD gateway vulnerabilities, Paystack and Flutterwave credential exposure, and patterns relevant to Nigeria Data Protection Act compliance. No foreign scanner prioritises this. Permi does.
 
@@ -31,7 +31,7 @@ Built from Jos, Nigeria. For African fintech engineering teams. Then for the wor
 ```bash
 pip install permi
 permi setup --community    # 50 free AI filter credits — no card needed
-permi scan --path ./myapp
+permi scan ./myapp
 ```
 
 ---
@@ -54,7 +54,7 @@ If you are on a **corporate machine or university network**, your IT department 
 ```bash
 wsl
 pip install permi
-permi scan --path ./myapp
+permi scan ./myapp
 ```
 
 ---
@@ -67,85 +67,51 @@ pip install permi
 
 Requires Python 3.9+. Works on Windows, macOS, and Linux.
 
-### For JavaScript/SPA scanning (React, Vue, Angular, Next.js)
-
-```bash
-pip install "permi[js]"
-playwright install chromium
-```
-
-> **Cloudflare-protected sites:** Also run `pip install playwright-stealth` for better rendering success rates.
-
-> **Low-RAM machines (4GB):** Use `--max-pages 10` with `--js`.
-
 ---
 
 ## Usage
 
-### Scan a live website (standard HTTP)
-
-```bash
-permi scan --url https://yoursite.com
-```
-
-### Scan a JavaScript-rendered application (React / Vue / Angular / Next.js)
-
-```bash
-permi scan --url https://yoursite.com --js
-```
-
-The `--js` flag launches a headless Chromium browser that fully renders JavaScript before scanning. Required for single-page applications where links and forms are built dynamically.
-
-Without `--js`, Permi will detect a SPA and show:
-
-```
-[Permi] ⚠️  JavaScript-rendered application detected.
-[Permi]    Re-run with --js to scan the full JavaScript-rendered content:
-[Permi]      permi scan --url https://yoursite.com --js
-```
-
 ### Scan a local codebase
 
 ```bash
-permi scan --path ./myapp
+permi scan ./myapp
 ```
 
 ### Scan a GitHub repository
 
 ```bash
-permi scan --path https://github.com/username/repo
-```
-
-### Include subdomains
-
-```bash
-permi scan --url https://yoursite.com --include-subdomains
+permi scan https://github.com/username/repo
 ```
 
 ### High severity findings only
 
 ```bash
-permi scan --url https://yoursite.com --severity high
+permi scan ./myapp --severity high
 ```
 
 ### Export results to a file
 
 ```bash
-permi scan --url https://yoursite.com --export report.md
-permi scan --path ./myapp --export results.json
-permi scan --path ./myapp --export results.txt
+permi scan ./myapp --export results.md
+permi scan ./myapp --export results.json
+permi scan ./myapp --export results.txt
+permi scan ./myapp --export report.docx
 ```
+
+If you give a bare filename (no folder), Permi saves it under `~/.permi/exports/` and prints that location so it's never a mystery where the file went. Give an absolute or relative path with a folder (`./reports/results.md`) to save it exactly there instead.
+
+`.docx` exports are a curated summary — one example finding per category, meant for a compliance/sales handoff — so a full `.md` report with every finding is written alongside it automatically for technical review.
 
 ### Show all raw findings (skip AI filter)
 
 ```bash
-permi scan --url https://yoursite.com --offline
+permi scan ./myapp --offline
 ```
 
 ### JSON output (for CI/CD pipelines)
 
 ```bash
-permi scan --url https://yoursite.com --output json
+permi scan ./myapp --output json
 ```
 
 ---
@@ -217,17 +183,13 @@ jobs:
 ## How It Works
 
 ```
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   Crawler   │───▶│    Scanner   │───▶│  AI Filter   │───▶│   Results    │
-│ HTTP or JS  │    │ SQL · XSS    │    │ Confirms or  │    │ Only real    │
-│  (--js)     │    │ Secrets · +  │    │ dismisses    │    │ findings     │
-└─────────────┘    └──────────────┘    │ each finding │    └──────────────┘
-                                       └──────────────┘
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│    Scanner  │───▶│  AI Filter   │───▶│   Results    │
+│ SQL · XSS   │    │ Confirms or  │    │ Only real    │
+│ Secrets · + │    │ dismisses    │    │ findings     │
+└─────────────┘    │ each finding │    └──────────────┘
+                    └──────────────┘
 ```
-
-**Two crawler modes:**
-- **HTTP mode** (default) — fast BeautifulSoup crawler for server-rendered sites
-- **JS mode** (`--js`) — Playwright headless Chromium for React/Vue/Angular SPAs
 
 **AI filter:**
 - Reviews each finding individually before it reaches you
@@ -240,16 +202,7 @@ jobs:
 
 ## What Permi Detects
 
-### Web scanning (`--url`)
-
-| Category | What is detected |
-|----------|-----------------|
-| SQL Injection | Error-based, Boolean-based blind, Time-based blind |
-| Cross-Site Scripting | Reflected XSS — HTML-encoding aware, CSP-aware |
-| Missing Security Headers | CSP, HSTS, X-Frame-Options, Permissions-Policy |
-| Server Version Disclosure | Server and X-Powered-By version number leakage |
-
-### Source code scanning (`--path`)
+### Source code scanning
 
 | Category | What is detected |
 |----------|-----------------|
@@ -275,14 +228,7 @@ Permi includes rules built for the African development context that no global to
 ## Example Output
 
 ```
-[Permi] Mode     : JS scan (Playwright headless browser)
-[Permi] Target   : https://yourapp.com
-[Permi] Crawl    : up to 15 pages (JS-rendered)
-
-[Permi JS] Rendering page 1/15: https://yourapp.com
-[Permi JS] Rendering page 2/15: https://yourapp.com/login
-[Permi JS] Crawl complete — 8 pages rendered, 24 URLs found, 12 unique signatures
-
+[Permi] Target   : ./myapp
 [Permi] Engine found 7 raw finding(s)
 [Permi] Running AI filter on 7 finding(s)...
 
@@ -305,13 +251,12 @@ Permi includes rules built for the African development context that no global to
     • 1× Insecure — SSL/TLS verification disabled
 ════════════════════════════════════════════════════════════════════════
 
-  [1] [HIGH] WEB_SQL001  SQL Injection — Error-based
-  URL       : https://yourapp.com/login
-  Parameter : username
+  [1] [HIGH] SQL001  SQL Injection — string concatenation
+  File      : app/routes/users.py:42
   Fix       : Use parameterised queries: cursor.execute("SELECT * FROM users WHERE name = ?", (name,))
-  AI        : REAL [94% confidence]  SQL syntax error confirms input reaches query unescaped.
+  AI        : REAL [94% confidence]  User input is concatenated directly into the query string.
 
-  Scan completed in 2 min 14s | 12 URLs tested
+  Scan completed in 4s
 ```
 
 ---
@@ -319,25 +264,16 @@ Permi includes rules built for the African development context that no global to
 ## CLI Reference
 
 ```
-permi scan --url URL             Scan a live website
-  --js                           Use Playwright for JS-rendered SPAs
-  --js-timeout N                 Per-page timeout in seconds (default: 20)
-  --include-subdomains           Also scan subdomains
-  --max-pages N                  Max pages to crawl (default: 30)
-  --severity LEVEL               high | medium | low | all (default: all)
+permi scan PATH                  Scan local codebase or GitHub repo
+  --severity LEVEL               critical | high | medium | low | all (default: all)
   --offline                      Skip AI filter, show raw findings
   --output FORMAT                human (default) | json
-  --export FILE                  Export full report (.txt, .json, .md)
-
-permi scan --path PATH           Scan local codebase or GitHub repo
-  --severity LEVEL               Filter by severity
-  --offline                      Skip AI filter
-  --output FORMAT                human | json
-  --export FILE                  Export full report
+  --export FILE                  Export full report (.txt, .json, .md, .docx)
+  --project NAME                 Project name for the database
 
 permi setup --community          Register for 50 free AI filter credits
 permi setup --api-key KEY        Use your own OpenRouter API key (unlimited)
-permi info                       Show config, credits, Playwright status
+permi info                       Show config and credit status
 permi feedback                   Share feedback with the Permi team
 ```
 
@@ -353,17 +289,24 @@ Permi exits with code `1` if any HIGH severity findings are confirmed after filt
   run: |
     pip install permi
     permi setup --api-key ${{ secrets.OPENROUTER_API_KEY }}
-    permi scan --path . --severity high --output json --export permi-report.json
+    permi scan . --severity high --output json --export permi-report.json
 ```
 
 ```bash
 # Fail the build on high severity findings
-permi scan --path ./myapp --severity high || exit 1
+permi scan ./myapp --severity high || exit 1
 ```
 
 ---
 
 ## Changelog
+
+### v0.3.1 — Codebase-only focus
+- **REMOVED:** Live URL/web scanning (`--url`, `--js`, `--js-timeout`, `--include-subdomains`, `--max-pages`). Permi now focuses exclusively on source code scanning, which is where the AI filter, fix templates, and compliance mapping add the most value. `--path` is also gone — pass the path positionally: `permi scan ./myapp` instead of `permi scan --path ./myapp`.
+- **CHANGED:** `.docx` exports now automatically write a matching `.md` alongside them with the full findings list, for technical review.
+- **CHANGED:** Exporting without a folder in the filename now prints an explicit notice that the report is being saved to the default `~/.permi/exports/` location.
+- **CHANGED:** The feedback prompt no longer shows after every scan — it appears at most once every 10-15 scans.
+- **REMOVED:** `permi[js]` extra (Playwright/playwright-stealth) and the `httpx`/`beautifulsoup4` dependencies.
 
 ### v0.2.17 — Precision improvements
 - **FIX:** Windows Defender freeze — DB path now resolves lazily, not at import time

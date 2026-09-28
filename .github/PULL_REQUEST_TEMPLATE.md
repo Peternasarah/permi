@@ -31,12 +31,12 @@
 
 <!-- How did you verify this works? -->
 
-- [ ] Ran `permi scan --path ./test_project --offline` — existing findings unchanged
-- [ ] Ran `permi scan --path ./test_project` — AI filter still works
+- [ ] Ran `permi scan ./test_project --offline` — existing findings unchanged
+- [ ] Ran `permi scan ./test_project` — AI filter still works
 - [ ] Added a test case to `test_project/` that triggers the new rule (if adding a rule)
 - [ ] Tested on Windows / macOS / Linux (check what you tested on)
 
-**Output of `permi scan --path ./test_project --offline` after this change:**
+**Output of `permi scan ./test_project --offline` after this change:**
 
 ```
 <!-- Paste the summary line here, e.g.:

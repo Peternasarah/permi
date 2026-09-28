@@ -64,10 +64,10 @@ jobs:
         run: permi scan --help
 
       - name: Run CLI scan — offline mode
-        run: permi scan --path ./test_project --offline --output json || true
+        run: permi scan ./test_project --offline --output json || true
 
       - name: Run CLI scan — severity filter
-        run: permi scan --path ./test_project --offline --severity high || true
+        run: permi scan ./test_project --offline --severity high || true
 
   # ── Job 2: Build distribution package ─────────────────────────────────────
   build:
@@ -129,13 +129,13 @@ jobs:
         run: python -c "from db.database import init_db; init_db()"
 
       - name: Scan scanner module
-        run: permi scan --path ./scanner --offline --severity high --output json || true
+        run: permi scan ./scanner --offline --severity high --output json || true
 
       - name: Scan AI filter module
-        run: permi scan --path ./ai_filter --offline --severity high --output json || true
+        run: permi scan ./ai_filter --offline --severity high --output json || true
 
       - name: Scan CLI module
-        run: permi scan --path ./cli --offline --severity high --output json || true
+        run: permi scan ./cli --offline --severity high --output json || true
 
       - name: Scan DB module
-        run: permi scan --path ./db --offline --severity high --output json || true
+        run: permi scan ./db --offline --severity high --output json || true
